@@ -409,9 +409,9 @@ function renderImportPreview() {
     ? `${additions} unique read ${additions === 1 ? "book" : "books"} ready to import${breakdown ? ` · ${breakdown}` : ""}. The file stays here; cover ISBNs are looked up with Open Library.`
     : pendingBooks.length
       ? `${pendingBooks.length} read-book rows found · ${savedMatches} already saved${repeatedRows ? ` · ${repeatedRows} repeated in the file` : ""}. Click “Rebuild rolling shelf” to refresh its display from this file.`
-      : "No read books found. Make sure the file includes Title and Authors plus a Read Status, Last Date Read, or Dates Read column.";
-  $("#confirm-import").disabled = pendingBooks.length === 0;
-  $("#confirm-import").textContent = additions === 0 && pendingBooks.length ? "Rebuild rolling shelf" : "Import books";
+      : "No read books were recognized in this file. You can still rebuild the rolling shelf from books already saved in this browser.";
+  $("#confirm-import").disabled = false;
+  $("#confirm-import").textContent = additions > 0 ? "Import books" : "Rebuild rolling shelf";
 }
 $("#import-books-open").addEventListener("click", () => {
   pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
@@ -423,14 +423,14 @@ $("#reading-file").addEventListener("change", async (event) => {
     pendingBooks = /\.json$/i.test(file.name) ? booksFromJSON(text) : booksFromCSV(text);
     renderImportPreview();
   } catch (error) {
-    pendingBooks = []; $("#import-preview").textContent = `Couldn’t read that file: ${error.message || "unsupported format"}`; $("#confirm-import").disabled = true;
+    pendingBooks = []; $("#import-preview").textContent = `Couldn’t read book rows from that file: ${error.message || "unsupported format"} You can still rebuild the rolling shelf from books already saved in this browser.`; $("#confirm-import").disabled = false; $("#confirm-import").textContent = "Rebuild rolling shelf";
   }
 });
-$("#import-form").addEventListener("submit", (event) => {
+$("#confirm-import").addEventListener("click", (event) => {
   event.preventDefault(); let imported = 0; let refreshed = 0;
   for (const book of pendingBooks) { const result = addShelfBook(book, { refresh: true }); if (result === "added") imported++; else if (result === "updated") refreshed++; }
   save(); render(); renderShelf(true); $("#import-dialog").close();
-  showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Rolling shelf refreshed with ${refreshed} ${refreshed === 1 ? "book" : "books"}`);
+  showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Rolling shelf refreshed · ${state.books.length} ${state.books.length === 1 ? "book" : "books"} saved`);
 });
 async function openBookDetails(book, context = "history") {
   activeShelfBook = book; activeBookContext = context;
