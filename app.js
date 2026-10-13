@@ -112,19 +112,30 @@ function renderFriends(query = "") {
   $("#friend-results").innerHTML = members.length ? members.map((name, index) => `<button class="friend-result" data-friend="${escapeHTML(name)}"><i class="member-avatar avatar-${index % 4}">${escapeHTML(name.trim().charAt(0).toUpperCase() || "R")}</i><span><strong>${escapeHTML(name)}</strong><small>${name === state.profile.name ? "Your profile" : "Book club member"}</small></span><b>View profile ↗</b></button>`).join("") : `<div class="search-prompt">No club members match that search.</div>`;
 }
 
-function googleBook(item) {
-  const info = item.volumeInfo || {};
-  const isbn = (info.industryIdentifiers || []).find((id) => id.type === "ISBN_13")?.identifier || (info.industryIdentifiers || []).find((id) => id.type === "ISBN_10")?.identifier || "";
-  const rawImage = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || "";
-  const coverUrl = rawImage ? rawImage.replace(/^http:/, "https:").replace("&edge=curl", "") : "";
-  return { id: item.id || crypto.randomUUID(), title: info.title || "Untitled", author: (info.authors || []).join(", ") || "Author not listed", isbn: cleanISBN(isbn), coverUrl, description: (info.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(), rating: info.averageRating || 0, ratingsCount: info.ratingsCount || 0 };
+function catalogBook(doc) {
+  const sentence = Array.isArray(doc.first_sentence) ? doc.first_sentence.join(" ") : (doc.first_sentence || "");
+  const coverUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${encodeURIComponent(doc.cover_i)}-M.jpg?default=false` : "";
+  return { id: String(doc.key || crypto.randomUUID()).replace(/^\//, ""), workKey: doc.key || "", title: doc.title || "Untitled", author: (doc.author_name || []).join(", ") || "Author not listed", isbn: cleanISBN((doc.isbn || [])[0]), coverUrl, description: String(sentence).replace(/\s+/g, " ").trim(), rating: doc.ratings_average || 0, ratingsCount: doc.ratings_count || 0 };
 }
-async function searchGoogleBooks(query) {
-  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&projection=lite`;
-  const response = await fetch(url);
+async function enrichCatalogBook(book) {
+  if (!book.workKey) return book;
+  try {
+    const [workResponse, ratingResponse] = await Promise.all([
+      fetch(`https://openlibrary.org${book.workKey}.json`),
+      fetch(`https://openlibrary.org${book.workKey}/ratings.json`)
+    ]);
+    const [work, ratings] = await Promise.all([workResponse.ok ? workResponse.json() : {}, ratingResponse.ok ? ratingResponse.json() : {}]);
+    const description = typeof work.description === "string" ? work.description : work.description?.value || book.description;
+    return { ...book, description: String(description || book.description || "").replace(/\s+/g, " ").trim(), rating: ratings.summary?.average || book.rating, ratingsCount: ratings.summary?.count || book.ratingsCount };
+  } catch { return book; }
+}
+async function searchBookCatalog(query, enrich = false) {
+  const params = new URLSearchParams({ q: query, limit: "8", fields: "key,title,author_name,cover_i,isbn,ratings_average,ratings_count,first_sentence,first_publish_year" });
+  const response = await fetch(`https://openlibrary.org/search.json?${params}`);
   if (!response.ok) throw new Error("Book search is unavailable right now.");
   const data = await response.json();
-  return (data.items || []).map(googleBook);
+  const books = (data.docs || []).map(catalogBook);
+  return enrich ? Promise.all(books.map(enrichCatalogBook)) : books;
 }
 function catalogMarkup(book, options = {}) {
   const action = options.action === undefined ? "catalog-add-book" : options.action;
@@ -137,7 +148,7 @@ async function runBookSearch(input, target, { rating = true, description = true,
   if (query.length < 2) { target.innerHTML = `<div class="search-prompt">Type at least two letters to search the book catalog.</div>`; return []; }
   target.innerHTML = `<div class="search-prompt">Searching the book catalog…</div>`;
   try {
-    const books = await searchGoogleBooks(query);
+    const books = await searchBookCatalog(query, rating || description);
     target.innerHTML = books.length ? books.map((book) => catalogMarkup(book, { rating, description, action, label })).join("") : `<div class="search-prompt">No books found. Try another title or author.</div>`;
     return books;
   } catch (error) {

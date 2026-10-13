@@ -18,7 +18,7 @@ The shelf looks up cover art by ISBN through the Open Library Covers API. Import
 
 ## Profiles and book search
 
-The profile tab has an editable display name and avatar. Choose an image or video file to set the avatar; video uploads use a still frame. Pick up to nine profile books from your reading history or search Google Books. Discover searches the Google Books catalog for covers, average reader ratings, rating counts, and descriptions. These searches require an internet connection.
+The profile tab has an editable display name and avatar. Choose an image or video file to set the avatar; video uploads use a still frame. Pick up to nine profile books from your reading history or search Open Library. Discover searches Open Library for covers, average reader ratings, rating counts, and book descriptions. These searches require an internet connection.
 
 Club name, roster, profile details, selected books, notes, and reading data remain in this browser's local storage. Discover can search the local club roster; separate members cannot yet publish or view one another's profile data. Online profiles and shared club updates need a backend.
 
