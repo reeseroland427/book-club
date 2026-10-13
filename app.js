@@ -1,6 +1,6 @@
 const STORAGE_KEY = "reading-room-v1";
 const starter = {
-  book: { title: "The Paper Garden", author: "Your next favorite author", description: "A story for slow evenings, underlined sentences, and conversations that keep going after the last page." },
+  book: { title: "The Paper Garden", author: "Your next favorite author", description: "A story for slow evenings, underlined sentences, and conversations that keep going after the last page.", isbn: "" },
   chapters: Array.from({ length: 12 }, (_, i) => ({ id: i + 1, title: `Chapter ${i + 1}`, read: false })),
   notes: [],
   books: []
@@ -8,9 +8,12 @@ const starter = {
 let state;
 try { state = { ...starter, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
 catch { state = structuredClone(starter); }
+state.book = { ...starter.book, ...(state.book || {}) };
+state.books = Array.isArray(state.books) ? state.books : [];
 let activeNoteChapter = null;
 let activeShelfBook = null;
 let pendingBooks = [];
+let renderedShelfSignature = "";
 let toastTimeout;
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -24,8 +27,46 @@ function normalizedBookKey(book) { return `${(book.title || "").trim().toLocaleL
 function hasBook(book) { const key = normalizedBookKey(book); return state.books.some((saved) => normalizedBookKey(saved) === key); }
 function addShelfBook(book) {
   if (!book.title?.trim() || hasBook(book)) return false;
-  state.books.unshift({ id: crypto.randomUUID(), title: book.title.trim(), author: (book.author || "").trim(), dateRead: book.dateRead || "", source: book.source || "manual" });
+  state.books.unshift({ id: crypto.randomUUID(), title: book.title.trim(), author: (book.author || "").trim(), dateRead: book.dateRead || "", isbn: cleanISBN(book.isbn), coverUrl: safeCoverUrl(book.coverUrl), source: book.source || "manual" });
   return true;
+}
+function cleanISBN(value) {
+  const isbn = String(value || "").replace(/[^0-9xX]/g, "").toUpperCase();
+  return isbn.length === 10 || isbn.length === 13 ? isbn : "";
+}
+function safeCoverUrl(value) {
+  try { const url = new URL(String(value || "")); return ["https:", "http:"].includes(url.protocol) ? url.href : ""; }
+  catch { return ""; }
+}
+function coverURL(book) {
+  const direct = safeCoverUrl(book.coverUrl); if (direct) return direct;
+  const isbn = cleanISBN(book.isbn); return isbn ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false` : "";
+}
+
+function renderShelf(force = false) {
+  const books = state.books || [];
+  const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
+  const signature = JSON.stringify(books.map(({ id, title, author, dateRead, isbn, coverUrl }) => [id, title, author, dateRead, isbn, coverUrl]));
+  $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
+  empty.hidden = books.length > 0;
+  if (!books.length) { track.innerHTML = ""; track.style.animation = "none"; renderedShelfSignature = signature; return; }
+  if (!force && signature === renderedShelfSignature && track.firstElementChild) return;
+  renderedShelfSignature = signature;
+
+  const bookMarkup = books.map((book, index) => {
+    const cover = coverURL(book);
+    return `<button class="shelf-book shelf-tone-${index % 6}" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span><span class="shelf-cover-rule"></span><span class="shelf-cover-author">${escapeHTML(book.author || "BOOK CLUB")}</span></span>${cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
+  }).join("");
+  const oneLoop = `<div class="bookshelf-loop">${bookMarkup}</div>`;
+  track.style.animation = "none";
+  track.innerHTML = oneLoop;
+  const setWidth = track.firstElementChild.getBoundingClientRect().width;
+  const copies = Math.max(2, Math.ceil((viewport.clientWidth + setWidth) / Math.max(setWidth, 1)) + 1);
+  track.innerHTML = oneLoop.repeat(copies);
+  track.style.setProperty("--shelf-distance", `${setWidth}px`);
+  track.style.setProperty("--shelf-duration", `${Math.max(40, setWidth / 8)}s`);
+  track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
+  track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
 
 function render() {
@@ -45,10 +86,7 @@ function render() {
   $("#note-count").textContent = notesCount;
   $("#notes-pill").textContent = `${notesCount} ${notesCount === 1 ? "note" : "notes"}`;
 
-  const shelfBooks = state.books || [];
-  $("#bookshelf-count").textContent = `${shelfBooks.length} ${shelfBooks.length === 1 ? "book" : "books"}`;
-  $("#bookshelf-empty").hidden = shelfBooks.length > 0;
-  $("#bookshelf-books").innerHTML = shelfBooks.map((book, index) => `<button class="shelf-book shelf-tone-${index % 6}" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-spine-rule"></span><span class="shelf-spine-title">${escapeHTML(book.title)}</span><span class="shelf-spine-author">${escapeHTML(book.author || "BOOK CLUB")}</span></button>`).join("");
+  renderShelf();
 
   $("#chapter-list").innerHTML = state.chapters.map((chapter) => {
     const unlocked = isUnlocked(chapter.id);
@@ -68,13 +106,13 @@ function render() {
 }
 
 function openBookDialog() {
-  const form = $("#book-form"); form.elements.title.value = state.book.title; form.elements.author.value = state.book.author; form.elements.description.value = state.book.description; form.elements.chapters.value = state.chapters.length; $("#book-dialog").showModal();
+  const form = $("#book-form"); form.elements.title.value = state.book.title; form.elements.author.value = state.book.author; form.elements.isbn.value = state.book.isbn || ""; form.elements.description.value = state.book.description; form.elements.chapters.value = state.chapters.length; $("#book-dialog").showModal();
 }
 $("#edit-book-open").addEventListener("click", openBookDialog);
 $("#edit-book-inline").addEventListener("click", openBookDialog);
 $("#book-form").addEventListener("submit", (event) => {
   event.preventDefault(); const form = event.currentTarget; const count = Number(form.elements.chapters.value);
-  state.book = { title: form.elements.title.value.trim(), author: form.elements.author.value.trim(), description: form.elements.description.value.trim() };
+  state.book = { title: form.elements.title.value.trim(), author: form.elements.author.value.trim(), isbn: cleanISBN(form.elements.isbn.value), description: form.elements.description.value.trim() };
   if (count < state.chapters.length) {
     const removedIds = new Set(state.chapters.slice(count).map((chapter) => chapter.id));
     state.notes = state.notes.filter((note) => !removedIds.has(note.chapterId));
@@ -91,7 +129,7 @@ $("#chapter-list").addEventListener("click", (event) => {
     if (!chapter.read) state.chapters.slice(index + 1).forEach((later) => { later.read = false; });
     let finishedBook = false;
     if (chapter.read && state.chapters.length && state.chapters.every((item) => item.read)) {
-      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
+      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, isbn: state.book.isbn, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
     }
     save(); render(); showToast(finishedBook ? "Book finished and added to your bookshelf" : chapter.read ? "Chapter marked read · notes unlocked" : "Progress updated"); return;
   }
@@ -120,7 +158,7 @@ $("#reset-progress").addEventListener("click", () => {
 $("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
 $("#shelf-book-form").addEventListener("submit", (event) => {
   event.preventDefault(); const form = event.currentTarget;
-  const added = addShelfBook({ title: form.elements.title.value, author: form.elements.author.value, dateRead: form.elements.dateRead.value });
+  const added = addShelfBook({ title: form.elements.title.value, author: form.elements.author.value, isbn: form.elements.isbn.value, dateRead: form.elements.dateRead.value });
   if (!added) { showToast("That book is already on your shelf"); return; }
   save(); render(); $("#add-book-dialog").close(); showToast("Added to your bookshelf");
 });
@@ -174,7 +212,9 @@ function booksFromCSV(text) {
     const title = getValue(["title", "book title", "name", "book name"]);
     const author = getValue(["author", "authors", "book author", "primary author"]);
     const dateRead = getValue(["date read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
-    const book = importedBook(title, author, dateRead, getValue); if (book) books.push(book);
+    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10"]);
+    const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
+    const book = importedBook(title, author, dateRead, getValue); if (book) books.push({ ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) });
   }
   return books;
 }
@@ -189,7 +229,10 @@ function booksFromJSON(text) {
     const title = getValue(["title", "book title", "name", "book name"]);
     const author = getValue(["author", "authors", "book author", "primary author"]);
     const dateRead = getValue(["date read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
-    return importedBook(title, author, dateRead, getValue);
+    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10"]);
+    const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
+    const book = importedBook(title, author, dateRead, getValue);
+    return book ? { ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) } : null;
   }).filter(Boolean);
 }
 function renderImportPreview() {
@@ -197,11 +240,11 @@ function renderImportPreview() {
   const unique = new Set(); let duplicates = 0;
   pendingBooks.forEach((book) => { const key = normalizedBookKey(book); if (existing.has(key) || unique.has(key)) duplicates++; else unique.add(key); });
   const additions = unique.size;
-  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. Your file stays on this device.` : "No new read books found. Check that the file has title and author columns and a read shelf, status, or finished date.";
+  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : "No new read books found. Check that the file has title and author columns and a read shelf, status, or finished date.";
   $("#confirm-import").disabled = additions === 0;
 }
 $("#import-books-open").addEventListener("click", () => {
-  pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser and is not uploaded anywhere."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
+  pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
 });
 $("#reading-file").addEventListener("change", async (event) => {
   const file = event.currentTarget.files?.[0]; if (!file) return;
@@ -223,7 +266,7 @@ $("#bookshelf-books").addEventListener("click", (event) => {
   activeShelfBook = state.books.find((book) => book.id === button.dataset.shelfBook); if (!activeShelfBook) return;
   $("#shelf-detail-title").textContent = activeShelfBook.title;
   $("#shelf-detail-author").textContent = activeShelfBook.author ? `by ${activeShelfBook.author}` : "Author not listed";
-  $("#shelf-detail-date").textContent = activeShelfBook.dateRead ? `Finished ${activeShelfBook.dateRead}` : "Finished date not listed";
+  $("#shelf-detail-date").textContent = `${activeShelfBook.dateRead ? `Finished ${activeShelfBook.dateRead}` : "Finished date not listed"}${activeShelfBook.isbn ? ` · ISBN ${activeShelfBook.isbn}` : ""}`;
   $("#shelf-book-dialog").showModal();
 });
 $("#remove-shelf-book").addEventListener("click", () => {
@@ -232,4 +275,5 @@ $("#remove-shelf-book").addEventListener("click", () => {
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 render();
+window.addEventListener("resize", () => renderShelf(true), { passive: true });
 
