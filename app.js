@@ -161,7 +161,7 @@ function renderShelf() {
     const width = shelfSpineWidth(book, height);
     const mobileWidth = shelfSpineWidth(book, mobileHeight);
     const spineArt = safeCoverUrl(book.spineArtUrl);
-    return `<button class="shelf-book shelf-tone-${index % 6}" style="--spine-height:${height}px;--spine-mobile-height:${mobileHeight}px;--spine-width:${width.toFixed(2)}px;--spine-mobile-width:${mobileWidth.toFixed(2)}px" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.pageCount ? `, ${book.pageCount} pages` : ""}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span></span>${spineArt ? `<img class="shelf-cover-image shelf-spine-art" src="${escapeHTML(spineArt)}" alt="" loading="lazy" />` : cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
+    return `<button class="shelf-book shelf-tone-${index % 6}" style="--spine-height:${height}px;--spine-mobile-height:${mobileHeight}px;--spine-width:${width.toFixed(2)}px;--spine-mobile-width:${mobileWidth.toFixed(2)}px" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.pageCount ? `, ${book.pageCount} pages` : ""}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span></span>${spineArt ? `<img class="shelf-cover-image shelf-spine-art" src="${escapeHTML(spineArt)}" alt="" loading="lazy" />` : cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}<span class="shelf-hover-title" aria-hidden="true">${escapeHTML(book.title)}</span></button>`;
   }).join("");
   const oneLoop = `<div class="bookshelf-loop">${bookMarkup}</div>`;
   track.style.animation = "none";
@@ -1012,5 +1012,23 @@ render();
 setPage("club");
 enrichShelfPageCounts();
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
+const shelfWindow = $("#bookshelf-window");
+function setShelfEdgeSpeed(event) {
+  if (event.pointerType === "touch") return;
+  const bounds = shelfWindow.getBoundingClientRect();
+  const edgeSize = Math.min(72, Math.max(42, bounds.width * 0.1));
+  const edge = event.clientX <= bounds.left + edgeSize ? "left" : event.clientX >= bounds.right - edgeSize ? "right" : "";
+  if (edge) shelfWindow.dataset.edgeHover = edge;
+  else delete shelfWindow.dataset.edgeHover;
+  const animation = $("#bookshelf-books").getAnimations().find((item) => item.animationName === "shelf-loop");
+  if (!animation) return;
+  animation.playbackRate = edge ? (edge === "right" ? 3 : -3) : 1;
+}
+shelfWindow.addEventListener("pointermove", setShelfEdgeSpeed);
+shelfWindow.addEventListener("pointerleave", () => {
+  delete shelfWindow.dataset.edgeHover;
+  const animation = $("#bookshelf-books").getAnimations().find((item) => item.animationName === "shelf-loop");
+  if (animation) animation.playbackRate = 1;
+});
 window.addEventListener("resize", renderShelf, { passive: true });
 

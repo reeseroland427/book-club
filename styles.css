@@ -162,7 +162,7 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .profile-favorites-label{font:600 10px var(--sans);letter-spacing:1.1px;color:#f0e2d9!important}
 .shelf-book{width:var(--spine-width,15px);height:90px;border-radius:1px 2px 2px 1px}
 .shelf-cover-fallback{padding:0}
-.shelf-cover-title{position:absolute;left:50%;top:50%;display:block;width:calc(90px - 10px);max-height:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 8px/1 var(--serif);writing-mode:horizontal-tb;-webkit-line-clamp:unset;-webkit-box-orient:initial;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
+.shelf-cover-title{position:absolute;left:50%;top:50%;display:block;width:calc(90px - 10px);max-height:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 8px/1 var(--serif);writing-mode:horizontal-tb;-webkit-line-clamp:unset;-webkit-box-orient:initial;transform:translate(-50%,-50%) rotate(90deg);transform-origin:center}
 @media(max-width:560px){.shelf-book{width:var(--spine-mobile-width,12px);height:72px}.shelf-cover-title{width:calc(72px - 10px)}}
 
 /* A taller, wider dock gives the variable-height spines room to read like a shelf. */
@@ -185,4 +185,9 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .finished-book-cover img{object-fit:cover;background:#342421}
 .finished-book-card{width:100%;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .finished-book-card:hover{border-color:#a16b6d;filter:brightness(1.06)}
+.bookshelf-window[data-edge-hover] .bookshelf-books{animation-play-state:running!important}
+.shelf-book{overflow:visible}
+.shelf-book:hover,.shelf-book:focus-visible{z-index:5}
+.shelf-hover-title{position:absolute;z-index:4;top:5px;left:50%;max-width:min(220px,70vw);width:max-content;padding:5px 8px;border:1px solid #a16b6d;border-radius:5px;background:#493330;color:#fff2ec;font:600 10px/1.25 var(--sans);text-align:center;white-space:normal;box-shadow:0 3px 10px #160c0c88;opacity:0;visibility:hidden;transform:translateX(-50%);transition:opacity .12s,visibility .12s;pointer-events:none}
+.shelf-book:hover .shelf-hover-title,.shelf-book:focus-visible .shelf-hover-title{opacity:1;visibility:visible}
 
