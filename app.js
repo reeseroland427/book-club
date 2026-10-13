@@ -99,11 +99,11 @@ function renderClub() {
 function renderProfile() {
   $("#profile-name-display").textContent = state.profile.name;
   $("#profile-avatar").src = state.profile.avatar || "ghost-reading.svg";
-  $("#profile-book-count").textContent = `${state.profileBooks.length} of 9 selected`;
+  $("#profile-book-count").textContent = `${state.profileBooks.length} of 9 books selected`;
   $("#profile-book-grid").innerHTML = Array.from({ length: 9 }, (_, index) => {
     const book = state.profileBooks[index];
     const cover = book ? coverURL(book) : "";
-    return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-remove-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="Remove ${escapeHTML(book.title)}" aria-label="Remove ${escapeHTML(book.title)} from favorites">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button><span class="profile-book-caption">${escapeHTML(book.title)}</span>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
+    return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-remove-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="Remove ${escapeHTML(book.title)}" aria-label="Remove ${escapeHTML(book.title)} from favorites">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
   }).join("");
 }
 function renderFriends(query = "") {
@@ -367,14 +367,20 @@ $("#remove-shelf-book").addEventListener("click", () => {
 });
 
 $("#edit-club-open").addEventListener("click", () => {
-  const form = $("#club-form"); form.elements.name.value = state.club.name; form.elements.members.value = state.club.members.join("\n"); $("#club-dialog").showModal();
+  $("#club-name-input").value = state.club.name; $("#club-members-input").value = state.club.members.join("\n"); $("#club-dialog").showModal();
 });
 $("#edit-club-members").addEventListener("click", () => $("#edit-club-open").click());
-$("#club-form").addEventListener("submit", (event) => {
-  event.preventDefault(); const form = event.currentTarget;
-  state.club = { name: form.elements.name.value.trim(), members: [...new Set(form.elements.members.value.split(/\r?\n/).map((name) => name.trim()).filter(Boolean))] };
-  save(); render(); $("#club-dialog").close(); showToast("Book club updated");
-});
+function commitClubEdits() {
+  const name = $("#club-name-input").value.trim();
+  if (!name) { $("#club-name-input").focus(); showToast("Add a name for your book club"); return; }
+  const previous = state.club;
+  state.club = { name, members: [...new Set($("#club-members-input").value.split(/\r?\n/).map((member) => member.trim()).filter(Boolean))] };
+  try { save(); } catch { state.club = previous; showToast("Couldn’t save changes in this browser"); return; }
+  renderClub(); if (activePage === "discover") renderFriends($("#friend-search").value);
+  $("#club-dialog").close(); showToast("Book club changes saved");
+}
+$("#save-club-changes").addEventListener("click", commitClubEdits);
+$("#club-form").addEventListener("submit", (event) => { event.preventDefault(); commitClubEdits(); });
 $("#edit-profile-open").addEventListener("click", () => { const form = $("#profile-name-form"); form.elements.name.value = state.profile.name; $("#profile-name-dialog").showModal(); });
 $("#profile-name-form").addEventListener("submit", (event) => { event.preventDefault(); state.profile.name = event.currentTarget.elements.name.value.trim(); save(); renderProfile(); $("#profile-name-dialog").close(); showToast("Profile name updated"); });
 $("#avatar-upload").addEventListener("change", async (event) => {
