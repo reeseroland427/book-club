@@ -747,10 +747,10 @@ async function readCoverImage(file) {
   const imageUrl = URL.createObjectURL(file); const image = new Image(); image.src = imageUrl;
   try {
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
-    const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.86);
+    const canvas = document.createElement("canvas"); canvas.width = 400; canvas.height = 600;
+    const scale = Math.max(400 / image.naturalWidth, 600 / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
+    canvas.getContext("2d").drawImage(image, (400 - width) / 2, (600 - height) / 2, width, height);
+    return canvas.toDataURL("image/jpeg", 0.8);
   } finally { URL.revokeObjectURL(imageUrl); }
 }
 async function applyBookCoverFile(file) {
