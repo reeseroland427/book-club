@@ -53,3 +53,7 @@ body[data-shelf-edge="scalloped"] .bookshelf-ledge{clip-path:polygon(0 0,100% 0,
 body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{clip-path:polygon(0 100%,0 68%,12.5% 100%,25% 68%,37.5% 100%,50% 68%,62.5% 100%,75% 68%,87.5% 100%,100% 68%,100% 100%)}
 .avatar-drawing{object-fit:contain!important;background:#fffefa}
 .profile-shelf-slot{aspect-ratio:5/8!important}
+.bookshelf-dock{background:transparent!important;border-top:0!important;box-shadow:none!important;backdrop-filter:none!important}
+body[data-shelf-edge="scalloped"] .bookshelf-ledge{clip-path:none;mask:radial-gradient(10px 10px at 10px 10px,#000 98%,transparent 100%) top left/20px 10px repeat-x,linear-gradient(#000 0 0) bottom/100% 8px no-repeat}
+body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{border-radius:0;clip-path:none;mask:radial-gradient(10px 10px at 10px 10px,#000 98%,transparent 100%) top left/20px 10px repeat-x,linear-gradient(#000 0 0) bottom/100% 8px no-repeat;z-index:0}
+.profile-book-cover,.profile-book-empty{z-index:1}

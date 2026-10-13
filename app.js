@@ -349,9 +349,8 @@ function rowIsRead(getValue) {
   const shelf = getValue(["exclusive shelf", "shelf", "status", "reading status", "read status", "state"]);
   const shelves = getValue(["bookshelves", "shelves", "tags"]);
   const values = [shelf, shelves].filter(Boolean).join(",").toLowerCase().split(/[,;|]/).map((value) => value.trim().replace(/[_-]+/g, " "));
-  if (values.some((value) => /^(read|finished|complete|completed|done|read book)$/.test(value))) return true;
-  const hasStatus = Boolean(shelf || shelves);
-  return !hasStatus;
+  const unread = /^(to read|want to read|tbr|unread|currently reading|reading|in progress|up next|dnf|did not finish|abandoned|paused)$/;
+  return !values.some((value) => unread.test(value));
 }
 function importedBook(title, author, dateRead, getValue) {
   title = String(title || "").trim(); author = String(author || "").trim();
