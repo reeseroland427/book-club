@@ -82,9 +82,7 @@ function coverURL(book) {
 }
 
 function renderShelf(force = false) {
-  const books = Array.isArray(state.books) ? state.books.filter((book) => book && String(book.title || "").trim()) : [];
-  state.books = books;
-  books.forEach((book) => { book.id ||= crypto.randomUUID(); });
+  const books = state.books || [];
   const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
   const signature = JSON.stringify(books.map(({ id, title, author, dateRead, isbn, coverUrl }) => [id, title, author, dateRead, isbn, coverUrl]));
   $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
@@ -104,7 +102,7 @@ function renderShelf(force = false) {
   const copies = Math.max(2, Math.ceil((viewport.clientWidth + setWidth) / Math.max(setWidth, 1)) + 1);
   track.innerHTML = oneLoop.repeat(copies);
   track.style.setProperty("--shelf-distance", `${setWidth}px`);
-  track.style.setProperty("--shelf-duration", `${Math.max(45, setWidth / 16)}s`);
+  track.style.setProperty("--shelf-duration", `${Math.max(40, setWidth / 8)}s`);
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
@@ -349,8 +347,8 @@ function rowIsRead(getValue) {
   const shelf = getValue(["exclusive shelf", "shelf", "status", "reading status", "read status", "state"]);
   const shelves = getValue(["bookshelves", "shelves", "tags"]);
   const values = [shelf, shelves].filter(Boolean).join(",").toLowerCase().split(/[,;|]/).map((value) => value.trim().replace(/[_-]+/g, " "));
-  const unread = /^(to read|want to read|tbr|unread|currently reading|reading|in progress|up next|dnf|did not finish|abandoned|paused)$/;
-  return !values.some((value) => unread.test(value));
+  if (values.some((value) => /^(read|finished|complete|completed|done|read book)$/.test(value))) return true;
+  return !Boolean(shelf || shelves);
 }
 function importedBook(title, author, dateRead, getValue) {
   title = String(title || "").trim(); author = String(author || "").trim();
@@ -395,22 +393,16 @@ function booksFromJSON(text) {
 }
 function renderImportPreview() {
   const existing = new Set(state.books.map(normalizedBookKey));
-  const unique = new Set(); let savedMatches = 0; let repeatedRows = 0;
+  const unique = new Set(); let duplicates = 0;
   pendingBooks.forEach((book) => {
     const key = normalizedBookKey(book);
-    if (existing.has(key)) savedMatches++;
-    else if (unique.has(key)) repeatedRows++;
+    if (existing.has(key) || unique.has(key)) duplicates++;
     else unique.add(key);
   });
   const additions = unique.size;
-  const breakdown = [savedMatches && `${savedMatches} already saved`, repeatedRows && `${repeatedRows} repeated in the file`].filter(Boolean).join(" · ");
-  $("#import-preview").textContent = additions
-    ? `${additions} unique read ${additions === 1 ? "book" : "books"} ready to import${breakdown ? ` · ${breakdown}` : ""}. The file stays here; cover ISBNs are looked up with Open Library.`
-    : pendingBooks.length
-      ? `${pendingBooks.length} read-book rows found · ${savedMatches} already saved${repeatedRows ? ` · ${repeatedRows} repeated in the file` : ""}. Click “Rebuild rolling shelf” to refresh its display from this file.`
-      : "No read books were recognized in this file. You can still rebuild the rolling shelf from books already saved in this browser.";
-  $("#confirm-import").disabled = false;
-  $("#confirm-import").textContent = additions > 0 ? "Import books" : "Rebuild rolling shelf";
+  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : "No new read books found. Check that the file has title and author columns and a read shelf, status, or finished date.";
+  $("#confirm-import").disabled = additions === 0;
+  $("#confirm-import").textContent = "Import books";
 }
 $("#import-books-open").addEventListener("click", () => {
   pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
@@ -427,14 +419,13 @@ $("#reading-file").addEventListener("change", async (event) => {
     pendingBooks = /\.json$/i.test(file.name) ? booksFromJSON(text) : booksFromCSV(text);
     renderImportPreview();
   } catch (error) {
-    pendingBooks = []; $("#import-preview").textContent = `Couldn’t read book rows from that file: ${error.message || "unsupported format"} You can still rebuild the rolling shelf from books already saved in this browser.`; $("#confirm-import").disabled = false; $("#confirm-import").textContent = "Rebuild rolling shelf";
+    pendingBooks = []; $("#import-preview").textContent = `Couldn’t read that file: ${error.message || "unsupported format"}`; $("#confirm-import").disabled = true;
   }
 });
-$("#confirm-import").addEventListener("click", (event) => {
-  event.preventDefault(); let imported = 0; let refreshed = 0;
-  for (const book of pendingBooks) { const result = addShelfBook(book, { refresh: true }); if (result === "added") imported++; else if (result === "updated") refreshed++; }
-  save(); render(); renderShelf(true); $("#import-dialog").close();
-  showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Rolling shelf refreshed · ${state.books.length} ${state.books.length === 1 ? "book" : "books"} saved`);
+$("#import-form").addEventListener("submit", (event) => {
+  event.preventDefault(); let imported = 0;
+  for (const book of pendingBooks) if (addShelfBook(book)) imported++;
+  save(); render(); $("#import-dialog").close(); showToast(`${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf`);
 });
 async function openBookDetails(book, context = "history") {
   activeShelfBook = book; activeBookContext = context;
