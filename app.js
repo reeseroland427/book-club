@@ -37,7 +37,6 @@ let activeShelfBook = null;
 let activeHistoryBook = null;
 let activeBookContext = "history";
 let pendingBooks = [];
-let renderedShelfSignature = "";
 let toastTimeout;
 let searchDelay;
 let activePage = "club";
@@ -82,16 +81,13 @@ function coverURL(book) {
   const isbn = cleanISBN(book.isbn); return isbn ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false` : "";
 }
 
-function renderShelf(force = false) {
+function renderShelf() {
   const books = (state.books || []).filter((book) => book && typeof book === "object" && String(book.title || "").trim());
   if (books.length !== state.books.length) state.books = books;
   const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
-  const signature = JSON.stringify(books.map(({ id, title, author, dateRead, isbn, coverUrl }) => [id, title, author, dateRead, isbn, coverUrl]));
   $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
   empty.hidden = books.length > 0;
-  if (!books.length) { track.innerHTML = ""; track.style.animation = "none"; renderedShelfSignature = signature; return; }
-  if (!force && signature === renderedShelfSignature && track.firstElementChild) return;
-  renderedShelfSignature = signature;
+  if (!books.length) { track.innerHTML = ""; track.style.animation = "none"; return; }
 
   const bookMarkup = books.map((book, index) => {
     const cover = coverURL(book);
@@ -324,7 +320,7 @@ $("#reset-progress").addEventListener("click", () => {
 
 $("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
 function redrawRollingShelf({ announce = false } = {}) {
-  renderShelf(true);
+  render();
   if (announce) showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
 }
 $("#rebuild-rolling-shelf").addEventListener("click", () => redrawRollingShelf({ announce: true }));
@@ -492,7 +488,6 @@ function applyBookImport() {
   }
   save();
   render();
-  renderShelf(true);
   $("#import-dialog").close();
   showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Shelf refreshed from ${refreshed} ${refreshed === 1 ? "book" : "books"}`);
 }
@@ -509,7 +504,7 @@ $("#replace-import").addEventListener("click", () => {
     replacement.set(key, { ...(saved || {}), ...imported, id: saved?.id || crypto.randomUUID(), coverUrl: imported.coverUrl || saved?.coverUrl || "", isbn: imported.isbn || saved?.isbn || "" });
   }
   state.books = [...replacement.values()];
-  save(); render(); renderShelf(true); $("#import-dialog").close();
+  save(); render(); $("#import-dialog").close();
   showToast(`Rolling shelf replaced with ${state.books.length} ${state.books.length === 1 ? "book" : "books"}`);
 });
 async function openBookDetails(book, context = "history") {
@@ -540,7 +535,7 @@ async function openBookDetails(book, context = "history") {
     $("#book-detail-rating").textContent = book.rating ? `★ ${Number(book.rating).toFixed(1)} · ${Number(book.ratingsCount || 0).toLocaleString()} reader ratings` : "No reader ratings found yet.";
     const foundCover = coverURL(book);
     if (foundCover) $("#book-detail-cover").innerHTML = `<img src="${escapeHTML(foundCover)}" alt="Cover of ${escapeHTML(book.title)}" />`;
-    save(); renderShelf(); renderProfile();
+    save(); render();
   } catch {
     if (activeShelfBook === book && $("#shelf-book-dialog").open) {
       $("#book-detail-description").textContent = book.description || "A blurb could not be found right now.";
@@ -573,7 +568,7 @@ async function applyBookCoverFile(file) {
   if (!file || !activeShelfBook) return;
   try {
     activeShelfBook.coverUrl = await readCoverImage(file);
-    save(); renderShelf(true); renderProfile();
+    save(); render();
     $("#book-detail-cover").innerHTML = `<img src="${escapeHTML(activeShelfBook.coverUrl)}" alt="Uploaded cover of ${escapeHTML(activeShelfBook.title)}" />`;
     showToast("Book cover updated");
   } catch (error) { showToast(error.message || "Could not read that cover image"); }
@@ -718,33 +713,8 @@ $("#discover-book-results").addEventListener("click", (event) => {
   else { save(); render(); showToast("Added to your reading history"); }
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
-function scheduleShelfRedraw() {
-  let attempts = 0;
-  const redraw = () => {
-    redrawRollingShelf();
-    const track = $("#bookshelf-books");
-    const hasRenderedBooks = Boolean(track.querySelector(".shelf-book"));
-    if (state.books.length && !hasRenderedBooks && attempts < 8) {
-      attempts += 1;
-      window.setTimeout(() => requestAnimationFrame(redraw), 100);
-    }
-  };
-  requestAnimationFrame(() => requestAnimationFrame(redraw));
-}
 render();
 setPage("club");
-scheduleShelfRedraw();
-window.addEventListener("pageshow", scheduleShelfRedraw);
-window.addEventListener("load", () => {
-  // Repeat the profile button's redraw after the dock has had time to finish layout.
-  window.setTimeout(() => {
-    redrawRollingShelf();
-    scheduleShelfRedraw();
-  }, 1200);
-}, { once: true });
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) scheduleShelfRedraw();
-});
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
-window.addEventListener("resize", () => renderShelf(true), { passive: true });
+window.addEventListener("resize", renderShelf, { passive: true });
 
