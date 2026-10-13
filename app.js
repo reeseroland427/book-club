@@ -390,7 +390,13 @@ $("#avatar-upload").addEventListener("change", async (event) => {
       const canvas = document.createElement("canvas"); canvas.width = 512; canvas.height = 512;
       const scale = Math.max(512 / video.videoWidth, 512 / video.videoHeight); const width = video.videoWidth * scale; const height = video.videoHeight * scale;
       canvas.getContext("2d").drawImage(video, (512 - width) / 2, (512 - height) / 2, width, height); dataUrl = canvas.toDataURL("image/jpeg", 0.86); URL.revokeObjectURL(video.src);
-    } else dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+    } else {
+      const imageUrl = URL.createObjectURL(file); const image = new Image(); image.src = imageUrl;
+      await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+      const canvas = document.createElement("canvas"); canvas.width = 512; canvas.height = 512;
+      const scale = Math.max(512 / image.naturalWidth, 512 / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
+      canvas.getContext("2d").drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height); dataUrl = canvas.toDataURL("image/jpeg", 0.86); URL.revokeObjectURL(imageUrl);
+    }
     state.profile.avatar = dataUrl; save(); renderProfile(); showToast("Avatar updated");
   } catch { showToast("Could not read that avatar file"); }
 });
