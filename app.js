@@ -85,6 +85,17 @@ function shelfSpineRatio(value) {
   if (pages >= 1000) return 2;
   return Number((1.3 + ((pages - 100) / 900) * 0.7).toFixed(3));
 }
+function shelfSpineHeight(author, mobile = false) {
+  const name = String(author || "unknown author").trim().toLocaleLowerCase() || "unknown author";
+  let hash = 2166136261;
+  for (let index = 0; index < name.length; index++) hash = Math.imul(hash ^ name.charCodeAt(index), 16777619);
+  const desktopHeight = 112 + ((hash >>> 0) % 41);
+  return mobile ? Math.round(desktopHeight * 0.82) : desktopHeight;
+}
+function shelfSpineWidth(book, height) {
+  const uploadedRatio = Number(book.spineArtRatio);
+  return uploadedRatio > 0 && Number.isFinite(uploadedRatio) ? height * uploadedRatio : height * shelfSpineRatio(book.pageCount) / 9;
+}
 function cleanISBN(value) {
   const isbn = String(value || "").replace(/[^0-9xX]/g, "").toUpperCase();
   return isbn.length === 10 || isbn.length === 13 ? isbn : "";
@@ -101,7 +112,8 @@ function coverURL(book) {
 }
 
 function renderShelf() {
-  const books = (state.books || []).filter((book) => book && typeof book === "object" && String(book.title || "").trim());
+  const books = (state.books || []).filter((book) => book && typeof book === "object" && String(book.title || "").trim())
+    .sort((a, b) => String(a.author || "Unknown author").trim().localeCompare(String(b.author || "Unknown author").trim(), undefined, { sensitivity: "base" }) || String(a.title || "").localeCompare(String(b.title || ""), undefined, { sensitivity: "base" }));
   if (books.length !== state.books.length) state.books = books;
   const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
   $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
@@ -110,8 +122,12 @@ function renderShelf() {
 
   const bookMarkup = books.map((book, index) => {
     const cover = coverURL(book);
-    const ratio = shelfSpineRatio(book.pageCount);
-    return `<button class="shelf-book shelf-tone-${index % 6}" style="--spine-ratio:${ratio};--spine-width:${(ratio * 10).toFixed(2)}px;--spine-mobile-width:${(ratio * 8).toFixed(2)}px" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.pageCount ? `, ${book.pageCount} pages` : ""}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span></span>${cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
+    const height = shelfSpineHeight(book.author);
+    const mobileHeight = shelfSpineHeight(book.author, true);
+    const width = shelfSpineWidth(book, height);
+    const mobileWidth = shelfSpineWidth(book, mobileHeight);
+    const spineArt = safeCoverUrl(book.spineArtUrl);
+    return `<button class="shelf-book shelf-tone-${index % 6}" style="--spine-height:${height}px;--spine-mobile-height:${mobileHeight}px;--spine-width:${width.toFixed(2)}px;--spine-mobile-width:${mobileWidth.toFixed(2)}px" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.pageCount ? `, ${book.pageCount} pages` : ""}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span></span>${spineArt ? `<img class="shelf-cover-image shelf-spine-art" src="${escapeHTML(spineArt)}" alt="" loading="lazy" />` : cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
   }).join("");
   const oneLoop = `<div class="bookshelf-loop">${bookMarkup}</div>`;
   track.style.animation = "none";
@@ -645,6 +661,8 @@ async function openBookDetails(book, context = "history") {
   $("#remove-shelf-book").textContent = context === "profile" ? "Remove from profile shelf" : "Remove from shelf";
   $("#remove-shelf-book").hidden = context === "current";
   $("#book-cover-upload").value = "";
+  $("#book-spine-upload").value = "";
+  $("#book-spine-status").textContent = book.spineArtUrl ? "Custom spine art is saved · choose another image to replace it" : "Drop spine art here, or choose an image";
   $("#shelf-book-dialog").showModal();
   if (book.description && book.rating) return;
   try {
@@ -707,6 +725,32 @@ coverDropzone.addEventListener("drop", (event) => {
   event.preventDefault(); coverDropzone.classList.remove("dragging");
   applyBookCoverFile(event.dataTransfer?.files?.[0]);
 });
+async function readSpineImage(file) {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  const imageUrl = URL.createObjectURL(file); const image = new Image(); image.src = imageUrl;
+  try {
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+    const scale = Math.min(1, 1000 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas"); canvas.width = Math.max(1, Math.round(image.naturalWidth * scale)); canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    return { dataUrl: canvas.toDataURL("image/jpeg", 0.86), ratio: canvas.width / canvas.height };
+  } finally { URL.revokeObjectURL(imageUrl); }
+}
+async function applyBookSpineFile(file) {
+  if (!file || !activeShelfBook) return;
+  try {
+    const art = await readSpineImage(file);
+    activeShelfBook.spineArtUrl = art.dataUrl; activeShelfBook.spineArtRatio = art.ratio;
+    save(); renderShelf();
+    $("#book-spine-status").textContent = "Custom spine art saved · original image proportions retained";
+    showToast("Spine art updated");
+  } catch (error) { showToast(error.message || "Could not read that spine art"); }
+}
+$("#book-spine-upload").addEventListener("change", (event) => applyBookSpineFile(event.currentTarget.files?.[0]));
+const spineDropzone = $("#book-spine-dropzone");
+["dragenter", "dragover"].forEach((type) => spineDropzone.addEventListener(type, (event) => { event.preventDefault(); spineDropzone.classList.add("dragging"); }));
+["dragleave", "dragend"].forEach((type) => spineDropzone.addEventListener(type, () => spineDropzone.classList.remove("dragging")));
+spineDropzone.addEventListener("drop", (event) => { event.preventDefault(); spineDropzone.classList.remove("dragging"); applyBookSpineFile(event.dataTransfer?.files?.[0]); });
 $("#shelf-style-open").addEventListener("click", () => {
   $("#shelf-wood").value = state.shelfStyle.wood; $("#shelf-edge").value = state.shelfStyle.edge; $("#shelf-style-dialog").showModal();
 });

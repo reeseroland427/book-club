@@ -165,3 +165,16 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .shelf-cover-title{position:absolute;left:50%;top:50%;display:block;width:calc(90px - 10px);max-height:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 8px/1 var(--serif);writing-mode:horizontal-tb;-webkit-line-clamp:unset;-webkit-box-orient:initial;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
 @media(max-width:560px){.shelf-book{width:var(--spine-mobile-width,12px);height:72px}.shelf-cover-title{width:calc(72px - 10px)}}
 
+/* A taller, wider dock gives the variable-height spines room to read like a shelf. */
+.main-content{padding-bottom:252px}
+.bookshelf-dock{height:228px;padding-top:11px}
+.bookshelf-window{height:166px}
+.bookshelf-loop{height:100%;gap:0;padding:0}
+.bookshelf-books{height:100%;align-items:flex-end}
+.shelf-book{width:var(--spine-width,25px);height:var(--spine-height,132px);border-radius:1px 2px 2px 1px}
+.shelf-cover-image{object-fit:cover}
+.shelf-cover-image.shelf-spine-art{object-fit:fill}
+.shelf-cover-title{width:calc(var(--spine-height,132px) - 10px)}
+@media(max-width:850px){.main-content{padding-bottom:252px}}
+@media(max-width:560px){.bookshelf-dock{height:190px;padding-top:8px}.bookshelf-window{height:136px}.bookshelf-loop{gap:0;padding:0}.shelf-book{width:var(--spine-mobile-width,20px);height:var(--spine-mobile-height,108px)}.shelf-cover-title{width:calc(var(--spine-mobile-height,108px) - 10px)}.main-content{padding-bottom:212px}}
+
