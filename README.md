@@ -12,7 +12,7 @@ Each chapter unlocks notes once that chapter and every earlier chapter are marke
 
 ## Bookshelf and imports
 
-Finished books can be added by hand, imported from Goodreads library CSV files, or imported from CSV/JSON files with Goodreads-compatible fields. Read/finished shelves and completion dates are recognized; duplicate title/author pairs are skipped. Marking every chapter in the current book read adds it to the shelf automatically. Files are parsed in the browser and are not uploaded to a server.
+Finished books can be added by hand, imported from Goodreads library CSV files, or imported from CSV/JSON files with Goodreads-compatible fields. Read/finished shelves and completion dates are recognized; files without status or completion-date fields are treated as all finished. Duplicate title/author pairs are skipped. Marking every chapter in the current book read adds it to the shelf automatically. Files are parsed in the browser and are not uploaded to a server.
 
 ## Current limits
 
