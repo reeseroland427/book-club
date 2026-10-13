@@ -46,6 +46,7 @@ let activePage = "club";
 let profileBookSearchResults = [];
 let pendingAvatarLook = { ...state.profile.avatarLook };
 let pendingAvatarLookChanged = false;
+let pendingAddBookCover = "";
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -75,6 +76,7 @@ function cleanISBN(value) {
   return isbn.length === 10 || isbn.length === 13 ? isbn : "";
 }
 function safeCoverUrl(value) {
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(String(value || ""))) return value;
   try { const url = new URL(String(value || "")); return ["https:", "http:"].includes(url.protocol) ? url.href : ""; }
   catch { return ""; }
 }
@@ -354,7 +356,12 @@ $("#reset-progress").addEventListener("click", () => {
   state.chapters.forEach((chapter) => { chapter.read = false; }); save(); render(); showToast("Reading progress reset");
 });
 
-$("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
+$("#add-book-open").addEventListener("click", () => {
+  $("#shelf-book-form").reset(); pendingAddBookCover = "";
+  $("#add-book-isbn-status").textContent = "Title and author stay editable. The lookup uses Open Library.";
+  $("#add-book-cover-status").textContent = "Drop a cover here, or choose an image";
+  $("#add-book-dialog").showModal();
+});
 function redrawRollingShelf({ announce = false } = {}) {
   renderShelf();
   if (announce) showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
@@ -396,12 +403,60 @@ $("#clear-history-books").addEventListener("click", () => {
   if (!window.confirm(`Remove all ${state.books.length} books from the rolling shelf and your reading history?`)) return;
   state.books = []; state.profileBooks = []; save(); render(); showToast("Rolling shelf cleared");
 });
-$("#shelf-book-form").addEventListener("submit", (event) => {
+async function lookupAddBookISBN() {
+  const input = $("#add-book-isbn");
+  const isbn = cleanISBN(input.value);
+  const button = $("#add-book-isbn-lookup");
+  const status = $("#add-book-isbn-status");
+  if (!isbn) { status.textContent = "Enter a valid ISBN-10 or ISBN-13."; input.focus(); return null; }
+  button.disabled = true; status.textContent = "Looking up this ISBN…";
+  try {
+    const url = `https://openlibrary.org/api/books?bibkeys=${encodeURIComponent(`ISBN:${isbn}`)}&jscmd=data&format=json`;
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("lookup failed");
+    const data = await response.json();
+    const match = data[`ISBN:${isbn}`];
+    if (!match) { status.textContent = "No match found. Check the ISBN or enter the title and author yourself."; return null; }
+    const form = $("#shelf-book-form");
+    if (!form.elements.title.value.trim()) form.elements.title.value = match.title || "";
+    if (!form.elements.author.value.trim()) form.elements.author.value = (match.authors || []).map((author) => author.name).filter(Boolean).join(", ");
+    if (!pendingAddBookCover) {
+      const cover = match.cover?.large || match.cover?.medium || match.cover?.small;
+      if (cover) pendingAddBookCover = safeCoverUrl(cover);
+    }
+    status.textContent = `Found “${match.title || "book"}”${match.authors?.length ? ` by ${match.authors.map((author) => author.name).filter(Boolean).join(", ")}` : ""}. Review or edit the details.`;
+    if (pendingAddBookCover) $("#add-book-cover-status").textContent = "A catalog cover was found. Upload a different cover to replace it.";
+    return match;
+  } catch {
+    status.textContent = "Couldn’t reach Open Library. You can still enter the details yourself.";
+    return null;
+  } finally { button.disabled = false; }
+}
+$("#add-book-isbn-lookup").addEventListener("click", lookupAddBookISBN);
+$("#shelf-book-form").addEventListener("submit", async (event) => {
   event.preventDefault(); const form = event.currentTarget;
-  const added = addShelfBook({ title: form.elements.title.value, author: form.elements.author.value, isbn: form.elements.isbn.value, dateRead: form.elements.dateRead.value });
+  const rawISBN = form.elements.isbn.value.trim();
+  const isbn = cleanISBN(rawISBN);
+  if (rawISBN && !isbn) { $("#add-book-isbn-status").textContent = "Enter a valid ISBN-10 or ISBN-13."; form.elements.isbn.focus(); return; }
+  if (isbn && (!form.elements.title.value.trim() || !form.elements.author.value.trim())) await lookupAddBookISBN();
+  const title = form.elements.title.value.trim();
+  if (!title) { $("#add-book-isbn-status").textContent = "No title was found. Check the ISBN or enter the book title."; form.elements.title.focus(); return; }
+  const added = addShelfBook({ title, author: form.elements.author.value, isbn, dateRead: form.elements.dateRead.value, coverUrl: pendingAddBookCover });
   if (!added) { showToast("That book is already on your shelf"); return; }
-  save(); render(); $("#add-book-dialog").close(); showToast("Added to your bookshelf");
+  pendingAddBookCover = ""; save(); render(); $("#add-book-dialog").close(); showToast("Added to your bookshelf");
 });
+async function setPendingAddBookCover(file) {
+  if (!file) return;
+  try {
+    pendingAddBookCover = await readCoverImage(file);
+    $("#add-book-cover-status").textContent = `${file.name} · cover ready`;
+  } catch (error) { $("#add-book-cover-status").textContent = error.message || "Could not read that cover image"; }
+}
+$("#add-book-cover-upload").addEventListener("change", (event) => setPendingAddBookCover(event.currentTarget.files?.[0]));
+const addBookCoverDropzone = $("#add-book-cover-dropzone");
+["dragenter", "dragover"].forEach((type) => addBookCoverDropzone.addEventListener(type, (event) => { event.preventDefault(); addBookCoverDropzone.classList.add("dragging"); }));
+["dragleave", "dragend"].forEach((type) => addBookCoverDropzone.addEventListener(type, () => addBookCoverDropzone.classList.remove("dragging")));
+addBookCoverDropzone.addEventListener("drop", (event) => { event.preventDefault(); addBookCoverDropzone.classList.remove("dragging"); setPendingAddBookCover(event.dataTransfer?.files?.[0]); });
 
 function parseCSV(text) {
   const parseWithDelimiter = (delimiter) => {

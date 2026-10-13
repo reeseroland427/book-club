@@ -147,3 +147,9 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .finished-books-empty{grid-column:1/-1;margin:0;padding:13px;color:#c9b8ac;font-size:10px;background:#3b2928;border:1px dashed #694e4b;border-radius:7px}
 @media(max-width:560px){.reading-goal-card,.finished-this-year-card{padding:17px 13px}.reading-goal-heading h2,.finished-this-year-heading h2{font-size:19px}.finished-this-year-list{grid-template-columns:1fr 1fr;gap:6px}.finished-book-card{gap:7px;padding:7px}.finished-book-cover{width:36px;height:52px}.finished-book-copy strong{font-size:10px}}
 
+.isbn-lookup-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;margin-top:7px}
+.isbn-lookup-row input{margin-top:0!important;min-width:0}
+.isbn-lookup-row button{align-self:stretch;white-space:nowrap;padding:0 13px;font-size:10px}
+.isbn-lookup-status{display:block;margin:-3px 0 12px;color:#c9b8ac;font-size:9px;line-height:1.5}
+#add-book-cover-dropzone{margin-top:7px}
+
