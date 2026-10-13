@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A little ghost reading a book">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A little ghost reading a book from a three-quarter angle">
   <circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/>
-  <path d="M151 393c-10-15-16-33-16-54V207c0-73 51-126 121-126s121 53 121 126v132c0 28-8 50-22 67-11-3-19-15-31-15-16 0-22 19-38 19s-22-19-39-19-23 19-39 19-23-19-39-19c-8 0-13 4-18 9Z" fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <ellipse cx="220" cy="215" rx="7" ry="10" fill="#343b36"/><ellipse cx="292" cy="215" rx="7" ry="10" fill="#343b36"/>
-  <path d="M241 246q15 12 30 0" fill="none" stroke="#343b36" stroke-width="4" stroke-linecap="round"/>
-  <path d="M157 315q48-23 99 2v80q-51-25-99-1z" fill="#fffefa" stroke="#343b36" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M256 317q51-25 99 0v79q-48-24-99 1z" fill="#fffefa" stroke="#343b36" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M256 318v78M171 337q36-13 70 0m-70 15q36-13 70 0m31-15q35-13 68 0m-68 15q35-13 68 0" fill="none" stroke="#565e58" stroke-width="3" stroke-linecap="round"/>
-  <path d="M157 322q-23-17-34-5-10 11 2 24l33 26m196-45q23-17 34-5 10 11-2 24l-33 26" fill="none" stroke="#343b36" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M144 397c-13-17-19-37-19-60V218c0-72 48-127 116-132 72-5 126 49 126 124v129c0 31-10 55-27 72-13-4-21-16-34-16-16 0-22 19-38 19s-22-19-39-19-24 19-40 19-23-19-39-19c-2 0-4 1-6 2Z" fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M205 104q47-30 94 1" fill="none" stroke="#565e58" stroke-width="3" stroke-linecap="round" opacity=".65"/>
+  <ellipse cx="216" cy="215" rx="7" ry="10" fill="#343b36"/><ellipse cx="278" cy="224" rx="7" ry="10" fill="#343b36"/>
+  <path d="M236 250q14 11 27 1" fill="none" stroke="#343b36" stroke-width="4" stroke-linecap="round"/>
+  <path d="M151 321q47-26 103 0v77q-56-27-103 1zM254 321q55-27 105-1v78q-50-25-105 0z" fill="#fffefa" stroke="#343b36" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M254 322v76M166 340q34-15 71-1m-71 17q34-15 71-1m32-16q35-15 70-1m-70 17q35-15 70-1" fill="none" stroke="#505751" stroke-width="3" stroke-linecap="round"/>
+  <path d="M151 324q-25-19-37-4-8 12 5 26l34 28m103-51q35-23 67-18" fill="none" stroke="#343b36" stroke-width="17" stroke-linecap="round"/>
   <path d="m101 130 3 8 8 3-8 3-3 8-3-8-8-3 8-3zM408 157l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="none" stroke="#626a64" stroke-width="2" stroke-linejoin="round"/>
 </svg>
 

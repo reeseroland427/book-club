@@ -5,7 +5,7 @@ const starter = {
   notes: [],
   books: [],
   club: { name: "The Reading Room", members: ["Reese", "Morgan"] },
-  profile: { name: "Reader", avatar: "ghost-reading.svg" },
+  profile: { name: "Reader", avatar: "ghost-reading.svg", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "" },
   profileBooks: []
 };
 let state;
@@ -16,7 +16,20 @@ state.books = Array.isArray(state.books) ? state.books : [];
 state.club = { ...starter.club, ...(state.club || {}) };
 state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
 state.profile = { ...starter.profile, ...(state.profile || {}) };
+state.profile.avatarLook = { ...starter.profile.avatarLook, ...(state.profile.avatarLook || {}) };
 state.profileBooks = Array.isArray(state.profileBooks) ? state.profileBooks.slice(0, 9) : [];
+let recoveredBookCount = 0;
+if (!state.books.length) {
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index); if (!key || key === STORAGE_KEY) continue;
+    try {
+      const saved = JSON.parse(localStorage.getItem(key) || "null");
+      if (Array.isArray(saved?.books) && saved.books.some((book) => book && String(book.title || "").trim())) {
+        state.books = saved.books; recoveredBookCount = state.books.length; break;
+      }
+    } catch { /* Ignore unrelated local storage values. */ }
+  }
+}
 let activeNoteChapter = null;
 let activeShelfBook = null;
 let pendingBooks = [];
@@ -25,6 +38,8 @@ let toastTimeout;
 let searchDelay;
 let activePage = "club";
 let profileBookSearchResults = [];
+let pendingAvatarLook = { ...state.profile.avatarLook };
+let pendingAvatarLookChanged = false;
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -98,13 +113,32 @@ function renderClub() {
 }
 function renderProfile() {
   $("#profile-name-display").textContent = state.profile.name;
-  $("#profile-avatar").src = state.profile.avatar || "ghost-reading.svg";
+  $("#profile-avatar").src = state.profile.avatar === "ghost-reading.svg" ? ghostAvatarURL(state.profile.avatarLook) : state.profile.avatar || ghostAvatarURL(state.profile.avatarLook);
+  const quote = state.profile.quote?.trim();
+  $("#profile-quote-display").textContent = quote ? `“${quote}”${state.profile.quoteBook ? ` — ${state.profile.quoteBook}` : ""}` : "";
+  $("#profile-quote-display").hidden = !quote;
   $("#profile-book-count").textContent = `${state.profileBooks.length} of 9 books selected`;
   $("#profile-book-grid").innerHTML = Array.from({ length: 9 }, (_, index) => {
     const book = state.profileBooks[index];
     const cover = book ? coverURL(book) : "";
     return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-remove-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="Remove ${escapeHTML(book.title)}" aria-label="Remove ${escapeHTML(book.title)} from favorites">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
   }).join("");
+}
+function ghostAvatarURL(look = {}) {
+  const bookColors = { paper: "#fffefa", coffee: "#76604f", maroon: "#713d48", sage: "#879486", blue: "#667783" };
+  const bookColor = bookColors[look.bookColor] || bookColors.paper;
+  const hats = {
+    beret: `<path d="M178 116q38-36 88-22 22 7 32 27-42 22-111 12z"/><path d="M187 125q44 7 99-7"/>`,
+    beanie: `<path d="M181 123q4-43 54-47 43-2 60 39l-8 17q-48-10-106 2z"/><path d="M183 119q50 12 108-2"/><circle cx="236" cy="72" r="7"/>`,
+    witch: `<path d="m190 117 37-70 41 71q-37-13-78-1z"/><path d="M182 119q50-16 96 2 4 8-7 11-44-12-88 2-10-5-1-15z"/>`
+  };
+  const pets = {
+    cat: `<g transform="translate(346 300)"><path d="m0 19 2-25 18 14 16-16 6 31q-2 23-22 24Q2 44 0 19z"/><path d="M12 22h1m16 0h1m-11 9q4 3 8 0m-10-3-10-3m10 8-10 3m21-8 10-3m-10 8 10 3"/></g>`,
+    bird: `<g transform="translate(359 320)"><path d="M0 20q4-25 27-24 23 1 26 24-14-10-27 1Q13 12 0 20z"/><path d="m49 17 12 5-12 5M21 44v10m17-10v10m-29 0h27"/><circle cx="36" cy="8" r="2" fill="#343b36"/></g>`
+  };
+  const hat = hats[look.hat] || ""; const pet = pets[look.pet] || "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/><g fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M143 398c-13-18-18-38-18-61V217c0-73 48-128 116-132 74-4 127 50 127 125v126c0 31-10 54-27 70-14-4-21-16-34-16-16 0-23 19-39 19s-22-19-39-19-24 19-40 19-24-19-40-19c-2 0-4 1-6 2z"/>${hat}<path d="M151 321q47-26 103 0v77q-56-27-103 1z" fill="${bookColor}"/><path d="M254 321q55-27 105-1v78q-50-25-105 0z" fill="${bookColor}"/><path d="M254 322v76M166 340q34-15 71-1m-71 17q34-15 71-1m32-16q35-15 70-1m-70 17q35-15 70-1" fill="none" stroke="#505751" stroke-width="3"/><path d="M151 324q-25-19-37-4-8 12 5 26l34 28m103-51q35-23 67-18" fill="none" stroke-width="17"/></g><g fill="none" stroke="#343b36" stroke-width="5" stroke-linecap="round"><ellipse cx="216" cy="215" rx="7" ry="10" fill="#343b36"/><ellipse cx="278" cy="224" rx="7" ry="10" fill="#343b36"/><path d="M236 250q14 11 27 1" stroke-width="4"/>${pet}</g></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 function renderFriends(query = "") {
   const needle = query.trim().toLocaleLowerCase();
@@ -381,8 +415,44 @@ function commitClubEdits() {
 }
 $("#save-club-changes").addEventListener("click", commitClubEdits);
 $("#club-form").addEventListener("submit", (event) => { event.preventDefault(); commitClubEdits(); });
-$("#edit-profile-open").addEventListener("click", () => { const form = $("#profile-name-form"); form.elements.name.value = state.profile.name; $("#profile-name-dialog").showModal(); });
-$("#profile-name-form").addEventListener("submit", (event) => { event.preventDefault(); state.profile.name = event.currentTarget.elements.name.value.trim(); save(); renderProfile(); $("#profile-name-dialog").close(); showToast("Profile name updated"); });
+function fillQuoteBookOptions() {
+  const select = $("#quote-book-select");
+  select.innerHTML = `<option value="">Choose a read book</option>` + state.books.map((book) => {
+    const label = `${book.title}${book.author ? ` — ${book.author}` : ""}`;
+    return `<option value="${escapeHTML(label)}">${escapeHTML(label)}</option>`;
+  }).join("");
+  select.value = state.profile.quoteBook || "";
+}
+$("#edit-profile-open").addEventListener("click", () => {
+  const form = $("#profile-name-form"); form.querySelector('[name="name"]').value = state.profile.name;
+  form.querySelector('[name="quote"]').value = state.profile.quote || ""; fillQuoteBookOptions(); $("#profile-name-dialog").showModal();
+});
+$("#profile-name-form").addEventListener("submit", (event) => {
+  event.preventDefault(); const form = event.currentTarget; const quote = form.querySelector('[name="quote"]').value.trim();
+  if (quote && !form.querySelector('[name="quoteBook"]').value) { showToast("Choose the book that quote is from"); return; }
+  state.profile.name = form.querySelector('[name="name"]').value.trim(); state.profile.quote = quote; state.profile.quoteBook = form.querySelector('[name="quoteBook"]').value;
+  save(); renderProfile(); $("#profile-name-dialog").close(); showToast("Profile updated");
+});
+
+function selectedAvatarLook() { return { hat: $("#avatar-hat").value, pet: $("#avatar-pet").value, bookColor: $("#avatar-book-color").value }; }
+$("#avatar-edit-open").addEventListener("click", () => {
+  pendingAvatarLook = { ...state.profile.avatarLook }; pendingAvatarLookChanged = false;
+  $("#avatar-hat").value = pendingAvatarLook.hat; $("#avatar-pet").value = pendingAvatarLook.pet; $("#avatar-book-color").value = pendingAvatarLook.bookColor;
+  $("#avatar-preview").src = state.profile.avatar === "ghost-reading.svg" ? ghostAvatarURL(pendingAvatarLook) : state.profile.avatar || ghostAvatarURL(pendingAvatarLook);
+  $("#avatar-dialog").showModal();
+});
+["#avatar-hat", "#avatar-pet", "#avatar-book-color"].forEach((selector) => $(selector).addEventListener("change", () => {
+  pendingAvatarLook = selectedAvatarLook(); pendingAvatarLookChanged = true; $("#avatar-preview").src = ghostAvatarURL(pendingAvatarLook);
+}));
+$("#avatar-done").addEventListener("click", () => {
+  if (!pendingAvatarLookChanged) return;
+  state.profile.avatarLook = pendingAvatarLook; state.profile.avatar = "ghost-reading.svg"; save(); renderProfile();
+});
+$("#avatar-upload-open").addEventListener("click", () => $("#avatar-upload").click());
+$("#avatar-reset").addEventListener("click", () => {
+  state.profile.avatar = "ghost-reading.svg"; pendingAvatarLook = { ...state.profile.avatarLook }; pendingAvatarLookChanged = false;
+  save(); renderProfile(); $("#avatar-preview").src = ghostAvatarURL(pendingAvatarLook); showToast("Reading ghost restored");
+});
 $("#avatar-upload").addEventListener("change", async (event) => {
   const file = event.currentTarget.files?.[0]; if (!file) return;
   if (file.size > 4 * 1024 * 1024) { showToast("Please choose a file smaller than 4 MB"); event.currentTarget.value = ""; return; }
@@ -403,7 +473,7 @@ $("#avatar-upload").addEventListener("change", async (event) => {
       const scale = Math.max(512 / image.naturalWidth, 512 / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
       canvas.getContext("2d").drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height); dataUrl = canvas.toDataURL("image/jpeg", 0.86); URL.revokeObjectURL(imageUrl);
     }
-    state.profile.avatar = dataUrl; save(); renderProfile(); showToast("Avatar updated");
+    state.profile.avatar = dataUrl; pendingAvatarLookChanged = false; save(); renderProfile(); $("#avatar-preview").src = dataUrl; showToast("Avatar updated");
   } catch { showToast("Could not read that avatar file"); }
 });
 
@@ -454,5 +524,6 @@ $("#discover-book-results").addEventListener("click", (event) => {
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 render();
 setPage("club");
+if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
 
