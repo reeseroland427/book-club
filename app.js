@@ -101,10 +101,16 @@ function renderShelf(force = false) {
   track.style.animation = "none";
   track.innerHTML = oneLoop;
   const setWidth = track.firstElementChild.getBoundingClientRect().width;
-  const copies = Math.max(2, Math.ceil((viewport.clientWidth + setWidth) / Math.max(setWidth, 1)) + 1);
+  const copies = setWidth > 0 ? Math.min(4, Math.max(2, Math.ceil((viewport.clientWidth + setWidth) / setWidth) + 1)) : 1;
   track.innerHTML = oneLoop.repeat(copies);
+  track.style.display = "flex";
+  track.style.visibility = "visible";
+  track.style.opacity = "1";
+  if (!setWidth) { track.style.animation = "none"; return; }
   track.style.setProperty("--shelf-distance", `${setWidth}px`);
   track.style.setProperty("--shelf-duration", `${Math.max(40, setWidth / 8)}s`);
+  track.style.animation = "none";
+  void track.offsetWidth;
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
@@ -317,6 +323,10 @@ $("#reset-progress").addEventListener("click", () => {
 });
 
 $("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
+$("#rebuild-rolling-shelf").addEventListener("click", () => {
+  renderShelf(true);
+  showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
+});
 $("#profile-add-history-book").addEventListener("click", () => $("#add-book-open").click());
 $("#reading-history-list").addEventListener("click", (event) => {
   const editButton = event.target.closest("[data-edit-history-book]");
