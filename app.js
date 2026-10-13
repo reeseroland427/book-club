@@ -323,10 +323,11 @@ $("#reset-progress").addEventListener("click", () => {
 });
 
 $("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
-$("#rebuild-rolling-shelf").addEventListener("click", () => {
+function redrawRollingShelf({ announce = false } = {}) {
   renderShelf(true);
-  showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
-});
+  if (announce) showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
+}
+$("#rebuild-rolling-shelf").addEventListener("click", () => redrawRollingShelf({ announce: true }));
 $("#profile-add-history-book").addEventListener("click", () => $("#add-book-open").click());
 $("#reading-history-list").addEventListener("click", (event) => {
   const editButton = event.target.closest("[data-edit-history-book]");
@@ -720,7 +721,7 @@ document.querySelectorAll("[data-close]").forEach((button) => button.addEventLis
 function scheduleShelfRedraw() {
   let attempts = 0;
   const redraw = () => {
-    renderShelf(true);
+    redrawRollingShelf();
     const track = $("#bookshelf-books");
     const hasRenderedBooks = Boolean(track.querySelector(".shelf-book"));
     if (state.books.length && !hasRenderedBooks && attempts < 8) {
@@ -734,7 +735,11 @@ render();
 setPage("club");
 scheduleShelfRedraw();
 window.addEventListener("pageshow", scheduleShelfRedraw);
-window.addEventListener("load", scheduleShelfRedraw, { once: true });
+window.addEventListener("load", () => {
+  // Run the same redraw action as the profile button after the page has fully loaded.
+  redrawRollingShelf();
+  scheduleShelfRedraw();
+}, { once: true });
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) scheduleShelfRedraw();
 });
