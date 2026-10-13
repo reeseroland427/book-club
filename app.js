@@ -5,7 +5,7 @@ const starter = {
   notes: [],
   books: [],
   club: { name: "The Reading Room", members: ["Reese", "Morgan"] },
-  profile: { name: "Reader", avatar: "ghost-reading.svg", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "" },
+  profile: { name: "Reader", avatar: "ghost-reading.png", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "" },
   profileBooks: []
 };
 let state;
@@ -16,6 +16,7 @@ state.books = Array.isArray(state.books) ? state.books : [];
 state.club = { ...starter.club, ...(state.club || {}) };
 state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
 state.profile = { ...starter.profile, ...(state.profile || {}) };
+if (state.profile.avatar === "ghost-reading.svg") state.profile.avatar = "ghost-reading.png";
 state.profile.avatarLook = { ...starter.profile.avatarLook, ...(state.profile.avatarLook || {}) };
 state.profileBooks = Array.isArray(state.profileBooks) ? state.profileBooks.slice(0, 9) : [];
 state.shelfStyle = { wood: "oak", edge: "straight", ...(state.shelfStyle || {}) };
@@ -52,10 +53,19 @@ function isUnlocked(id) { const index = chapterNumber(id); return index >= 0 && 
 function readableDate(value) { return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value)); }
 function normalizedBookKey(book) { return `${(book.title || "").trim().toLocaleLowerCase()}|${(book.author || "").trim().toLocaleLowerCase()}`; }
 function hasBook(book) { const key = normalizedBookKey(book); return state.books.some((saved) => normalizedBookKey(saved) === key); }
-function addShelfBook(book) {
-  if (!book.title?.trim() || hasBook(book)) return false;
-  state.books.unshift({ id: crypto.randomUUID(), title: book.title.trim(), author: (book.author || "").trim(), dateRead: book.dateRead || "", isbn: cleanISBN(book.isbn), coverUrl: safeCoverUrl(book.coverUrl), source: book.source || "manual" });
-  return true;
+function addShelfBook(book, { refresh = false } = {}) {
+  if (!book.title?.trim()) return false;
+  const title = book.title.trim(); const author = (book.author || "").trim();
+  const existing = state.books.find((saved) => normalizedBookKey(saved) === normalizedBookKey({ title, author }));
+  if (existing) {
+    if (!refresh) return false;
+    existing.id ||= crypto.randomUUID(); existing.title ||= title; existing.author ||= author;
+    existing.dateRead ||= book.dateRead || ""; existing.isbn ||= cleanISBN(book.isbn);
+    existing.coverUrl ||= safeCoverUrl(book.coverUrl); existing.source ||= book.source || "manual";
+    return "updated";
+  }
+  state.books.unshift({ id: crypto.randomUUID(), title, author, dateRead: book.dateRead || "", isbn: cleanISBN(book.isbn), coverUrl: safeCoverUrl(book.coverUrl), source: book.source || "manual" });
+  return "added";
 }
 function cleanISBN(value) {
   const isbn = String(value || "").replace(/[^0-9xX]/g, "").toUpperCase();
@@ -72,7 +82,9 @@ function coverURL(book) {
 }
 
 function renderShelf(force = false) {
-  const books = state.books || [];
+  const books = Array.isArray(state.books) ? state.books.filter((book) => book && String(book.title || "").trim()) : [];
+  state.books = books;
+  books.forEach((book) => { book.id ||= crypto.randomUUID(); });
   const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
   const signature = JSON.stringify(books.map(({ id, title, author, dateRead, isbn, coverUrl }) => [id, title, author, dateRead, isbn, coverUrl]));
   $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
@@ -92,7 +104,7 @@ function renderShelf(force = false) {
   const copies = Math.max(2, Math.ceil((viewport.clientWidth + setWidth) / Math.max(setWidth, 1)) + 1);
   track.innerHTML = oneLoop.repeat(copies);
   track.style.setProperty("--shelf-distance", `${setWidth}px`);
-  track.style.setProperty("--shelf-duration", `${Math.max(40, setWidth / 8)}s`);
+  track.style.setProperty("--shelf-duration", `${Math.max(45, setWidth / 16)}s`);
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
@@ -120,7 +132,9 @@ function renderClub() {
 }
 function renderProfile() {
   $("#profile-name-display").textContent = state.profile.name;
-  $("#profile-avatar").src = state.profile.avatar === "ghost-reading.svg" ? ghostAvatarURL(state.profile.avatarLook) : state.profile.avatar || ghostAvatarURL(state.profile.avatarLook);
+  const usesGhostDrawing = !state.profile.avatar || ["ghost-reading.svg", "ghost-reading.png"].includes(state.profile.avatar);
+  $("#profile-avatar").src = usesGhostDrawing ? ghostAvatarURL(state.profile.avatarLook) : state.profile.avatar;
+  $("#profile-avatar").classList.toggle("avatar-drawing", usesGhostDrawing);
   const quote = state.profile.quote?.trim();
   $("#profile-quote-display").textContent = quote ? `“${quote}”${state.profile.quoteBook ? ` — ${state.profile.quoteBook}` : ""}` : "";
   $("#profile-quote-display").hidden = !quote;
@@ -131,31 +145,26 @@ function renderProfile() {
     return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="View ${escapeHTML(book.title)}" aria-label="View ${escapeHTML(book.title)} details">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
   }).join("");
 }
+let ghostDrawingData = "";
+fetch("ghost-reading.png").then((response) => response.ok ? response.blob() : Promise.reject()).then((blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob);
+})).then((data) => { ghostDrawingData = data; if (["ghost-reading.png", "ghost-reading.svg"].includes(state.profile.avatar)) renderProfile(); }).catch(() => {});
 function ghostAvatarURL(look = {}) {
-  const bookColors = { paper: "#fffefa", coffee: "#76604f", maroon: "#713d48", sage: "#879486", blue: "#667783" };
-  const bookColor = bookColors[look.bookColor] || bookColors.paper;
+  const hasExtras = look.hat && look.hat !== "none" || look.pet && look.pet !== "none" || look.bookColor && look.bookColor !== "paper";
+  if (!hasExtras || !ghostDrawingData) return "ghost-reading.png";
+  const colors = { coffee: "#76604f", maroon: "#713d48", sage: "#879486", blue: "#667783" };
   const hats = {
-    beret: `<path d="M176 80q38-37 86-23 21 7 30 25-42 20-108 12z"/><path d="M184 87q44 7 97-7"/>`,
-    beanie: `<path d="M178 83q7-43 52-49 42-3 60 38l-8 15q-48-9-102 3z"/><path d="M180 80q49 11 105-2"/><circle cx="231" cy="33" r="7"/>`,
-    witch: `<path d="m185 78 38-67 38 69q-37-12-76-2z"/><path d="M177 81q49-16 93 1 5 7-6 11-43-11-85 2-10-5-2-14z"/>`
+    beret: `<path d="M244 91q54-56 126-35 29 9 42 36-62 30-161 15zM258 105q64 12 143-10" fill="#fffefa" fill-opacity=".9" stroke="#343b36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
+    beanie: `<path d="M248 94q8-66 76-76 62-5 91 58l-11 27q-71-15-151 5zM251 87q74 18 161-3" fill="#fffefa" fill-opacity=".9" stroke="#343b36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="325" cy="17" r="11" fill="#fffefa" stroke="#343b36" stroke-width="6"/>`,
+    witch: `<path d="m263 93 54-82 57 84q-53-18-111-2zM246 99q72-24 139 3 6 12-10 16-63-17-128 4-15-8-1-23z" fill="#fffefa" fill-opacity=".9" stroke="#343b36" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`
   };
   const pets = {
-    cat: `<g transform="translate(377 346)"><path d="m0 19 2-25 18 14 16-16 6 31q-2 23-22 24Q2 44 0 19z"/><path d="M12 22h1m16 0h1m-11 9q4 3 8 0m-10-3-10-3m10 8-10 3m21-8 10-3m-10 8 10 3"/></g>`,
-    bird: `<g transform="translate(386 358)"><path d="M0 20q4-25 27-24 23 1 26 24-14-10-27 1Q13 12 0 20z"/><path d="m49 17 12 5-12 5M21 44v10m17-10v10m-29 0h27"/><circle cx="36" cy="8" r="2" fill="#343b36"/></g>`
+    cat: `<g transform="translate(560 410)" fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="m0 22 3-34 25 19 24-22 8 41q-3 31-30 32Q3 58 0 22z"/><path d="M16 25h2m23 0h2m-19 13q6 5 12 0"/></g>`,
+    bird: `<g transform="translate(570 430)" fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M0 25Q6-8 37-5q31 2 35 32-19-14-37 2Q18 14 0 25z"/><path d="m68 21 18 7-18 7M27 58v14m25-14v14"/><circle cx="50" cy="9" r="3" fill="#343b36"/></g>`
   };
-  const hat = hats[look.hat] || ""; const pet = pets[look.pet] || "";
-  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
-    '<circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/>' +
-    '<g fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
-    '<path d="M177 460c-15 18-34 17-48-1-13-17-24-25-36-39-10-13-5-29-1-43l10-40c6-22 22-37 43-52l30-24c-24-21-39-51-37-82 1-43 21-80 53-107 29-24 61-37 93-35 37 2 66 19 88 46 24 28 44 57 63 86 23 34 40 69 51 105 9 30 15 55 11 74-4 21-21 34-41 45-26 14-53 14-81 21l-50 11c3 21 11 43 3 60-8 17-29 26-49 24-21-2-36-21-55-29-15-6-27 0-35 11-11 15-24 19-38 11z"/>' +
-    '<ellipse cx="171" cy="148" rx="10" ry="19" transform="rotate(-24 171 148)" fill="#343b36" stroke="none"/>' +
-    hat +
-    '<path d="M24 245q-2-12 8-22l29-23 85 58 37-30 96 73-13 22-105-44-65 28-53-34q-17-10-19-28z" fill="' + bookColor + '"/>' +
-    '<path d="m64 205 32 99m50-46 17 25m-65 21q34-28 68-17m-1-48 92 68" fill="none" stroke="#343b36" stroke-width="4"/>' +
-    '<path d="M99 314c23-24 48-37 71-36 21 1 52 19 77 38 11 8 17 15 12 22-6 8-14 3-21-1l-58-29c-15-7-33-3-48 7l-20 17z" fill="#fffefa"/>' +
-    '<path d="M257 327c17-18 36-29 51-27 13 2 17 14 8 24-17 16-35 24-55 28" fill="#fffefa"/>' +
-    '<path d="M174 285c38 5 74 28 104 53m-79 77c24-7 41 1 57 15 14 12 28 14 45 8m-211-99c-9 14-14 30-18 50" fill="none"/>' +
-    '</g><g fill="none" stroke="#343b36" stroke-width="5" stroke-linecap="round">' + pet + '</g></svg>';
+  const color = colors[look.bookColor] || "";
+  const recolor = color ? `<path d="M20 260 65 230 151 288 190 254 330 354 313 386 160 320 95 353 28 309Z" fill="${color}" fill-opacity=".34"/>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 800"><image href="${ghostDrawingData}" width="700" height="800" preserveAspectRatio="none"/>${recolor}${hats[look.hat] || ""}${pets[look.pet] || ""}</svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 function renderFriends(query = "") {
@@ -387,11 +396,22 @@ function booksFromJSON(text) {
 }
 function renderImportPreview() {
   const existing = new Set(state.books.map(normalizedBookKey));
-  const unique = new Set(); let duplicates = 0;
-  pendingBooks.forEach((book) => { const key = normalizedBookKey(book); if (existing.has(key) || unique.has(key)) duplicates++; else unique.add(key); });
+  const unique = new Set(); let savedMatches = 0; let repeatedRows = 0;
+  pendingBooks.forEach((book) => {
+    const key = normalizedBookKey(book);
+    if (existing.has(key)) savedMatches++;
+    else if (unique.has(key)) repeatedRows++;
+    else unique.add(key);
+  });
   const additions = unique.size;
-  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : pendingBooks.length ? `No new books to import. ${duplicates} entries are already on your shelf or repeated in the file.` : "No read books found. Make sure the file includes Title and Authors plus a Read Status, Last Date Read, or Dates Read column.";
-  $("#confirm-import").disabled = additions === 0;
+  const breakdown = [savedMatches && `${savedMatches} already saved`, repeatedRows && `${repeatedRows} repeated in the file`].filter(Boolean).join(" · ");
+  $("#import-preview").textContent = additions
+    ? `${additions} unique read ${additions === 1 ? "book" : "books"} ready to import${breakdown ? ` · ${breakdown}` : ""}. The file stays here; cover ISBNs are looked up with Open Library.`
+    : pendingBooks.length
+      ? `${pendingBooks.length} read-book rows found · ${savedMatches} already saved${repeatedRows ? ` · ${repeatedRows} repeated in the file` : ""}. Click “Rebuild rolling shelf” to refresh its display from this file.`
+      : "No read books found. Make sure the file includes Title and Authors plus a Read Status, Last Date Read, or Dates Read column.";
+  $("#confirm-import").disabled = pendingBooks.length === 0;
+  $("#confirm-import").textContent = additions === 0 && pendingBooks.length ? "Rebuild rolling shelf" : "Import books";
 }
 $("#import-books-open").addEventListener("click", () => {
   pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
@@ -407,9 +427,10 @@ $("#reading-file").addEventListener("change", async (event) => {
   }
 });
 $("#import-form").addEventListener("submit", (event) => {
-  event.preventDefault(); let imported = 0;
-  for (const book of pendingBooks) if (addShelfBook(book)) imported++;
-  save(); render(); $("#import-dialog").close(); showToast(`${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf`);
+  event.preventDefault(); let imported = 0; let refreshed = 0;
+  for (const book of pendingBooks) { const result = addShelfBook(book, { refresh: true }); if (result === "added") imported++; else if (result === "updated") refreshed++; }
+  save(); render(); renderShelf(true); $("#import-dialog").close();
+  showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Rolling shelf refreshed with ${refreshed} ${refreshed === 1 ? "book" : "books"}`);
 });
 async function openBookDetails(book, context = "history") {
   activeShelfBook = book; activeBookContext = context;
@@ -523,19 +544,21 @@ function selectedAvatarLook() { return { hat: $("#avatar-hat").value, pet: $("#a
 $("#avatar-edit-open").addEventListener("click", () => {
   pendingAvatarLook = { ...state.profile.avatarLook }; pendingAvatarLookChanged = false;
   $("#avatar-hat").value = pendingAvatarLook.hat; $("#avatar-pet").value = pendingAvatarLook.pet; $("#avatar-book-color").value = pendingAvatarLook.bookColor;
-  $("#avatar-preview").src = state.profile.avatar === "ghost-reading.svg" ? ghostAvatarURL(pendingAvatarLook) : state.profile.avatar || ghostAvatarURL(pendingAvatarLook);
+  const usesGhostDrawing = !state.profile.avatar || ["ghost-reading.svg", "ghost-reading.png"].includes(state.profile.avatar);
+  $("#avatar-preview").src = usesGhostDrawing ? ghostAvatarURL(pendingAvatarLook) : state.profile.avatar;
+  $("#avatar-preview").classList.toggle("avatar-drawing", usesGhostDrawing);
   $("#avatar-dialog").showModal();
 });
 ["#avatar-hat", "#avatar-pet", "#avatar-book-color"].forEach((selector) => $(selector).addEventListener("change", () => {
-  pendingAvatarLook = selectedAvatarLook(); pendingAvatarLookChanged = true; $("#avatar-preview").src = ghostAvatarURL(pendingAvatarLook);
+  pendingAvatarLook = selectedAvatarLook(); pendingAvatarLookChanged = true; $("#avatar-preview").src = ghostAvatarURL(pendingAvatarLook); $("#avatar-preview").classList.add("avatar-drawing");
 }));
 $("#avatar-done").addEventListener("click", () => {
   if (!pendingAvatarLookChanged) return;
-  state.profile.avatarLook = pendingAvatarLook; state.profile.avatar = "ghost-reading.svg"; save(); renderProfile();
+  state.profile.avatarLook = pendingAvatarLook; state.profile.avatar = "ghost-reading.png"; save(); renderProfile();
 });
 $("#avatar-upload-open").addEventListener("click", () => $("#avatar-upload").click());
 $("#avatar-reset").addEventListener("click", () => {
-  state.profile.avatar = "ghost-reading.svg"; pendingAvatarLook = { ...state.profile.avatarLook }; pendingAvatarLookChanged = false;
+  state.profile.avatar = "ghost-reading.png"; pendingAvatarLook = { ...state.profile.avatarLook }; pendingAvatarLookChanged = false;
   save(); renderProfile(); $("#avatar-preview").src = ghostAvatarURL(pendingAvatarLook); showToast("Reading ghost restored");
 });
 $("#avatar-upload").addEventListener("change", async (event) => {
@@ -558,7 +581,7 @@ $("#avatar-upload").addEventListener("change", async (event) => {
       const scale = Math.max(512 / image.naturalWidth, 512 / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
       canvas.getContext("2d").drawImage(image, (512 - width) / 2, (512 - height) / 2, width, height); dataUrl = canvas.toDataURL("image/jpeg", 0.86); URL.revokeObjectURL(imageUrl);
     }
-    state.profile.avatar = dataUrl; pendingAvatarLookChanged = false; save(); renderProfile(); $("#avatar-preview").src = dataUrl; showToast("Avatar updated");
+    state.profile.avatar = dataUrl; pendingAvatarLookChanged = false; save(); renderProfile(); $("#avatar-preview").src = dataUrl; $("#avatar-preview").classList.remove("avatar-drawing"); showToast("Avatar updated");
   } catch { showToast("Could not read that avatar file"); }
 });
 
@@ -611,4 +634,3 @@ render();
 setPage("club");
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
-

@@ -12,7 +12,7 @@ Each chapter unlocks notes once that chapter and every earlier chapter are marke
 
 ## Bookshelf and imports
 
-Finished books can be added by hand, imported from Goodreads library CSV files, or imported from CSV/JSON files with Goodreads-compatible fields. Read/finished shelves and completion dates are recognized; files without status or completion-date fields are treated as all finished. Duplicate title/author pairs are skipped. Marking every chapter in the current book read adds it to the shelf automatically. Files are parsed in the browser and are not uploaded to a server.
+Finished books can be added by hand, imported from Goodreads or StoryGraph CSV files, or imported from CSV/JSON files with compatible fields. Read/finished shelves, statuses, and completion dates are recognized; files without status or completion-date fields are treated as all finished. Re-importing an existing list refreshes the rolling shelf while preserving saved covers. Marking every chapter in the current book read adds it to the shelf automatically. Files are parsed in the browser and are not uploaded to a server.
 
 The shelf looks up cover art by ISBN through the Open Library Covers API. Imported direct cover URLs are also supported. Add or import ISBNs for edition-specific artwork; a designed title card appears when no cover image is available. Cover requests send only the ISBN to Open Library.
 
@@ -29,4 +29,3 @@ This is a local prototype. Book details, progress, notes, and the bookshelf are 
 ## Visual editing
 
 Most of the visual system lives in `styles.css`; content and interactions live in `index.html` and `app.js`. The colors and type scale are defined as CSS variables at the top of the stylesheet.
-
