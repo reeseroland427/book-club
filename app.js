@@ -736,9 +736,11 @@ setPage("club");
 scheduleShelfRedraw();
 window.addEventListener("pageshow", scheduleShelfRedraw);
 window.addEventListener("load", () => {
-  // Run the same redraw action as the profile button after the page has fully loaded.
-  redrawRollingShelf();
-  scheduleShelfRedraw();
+  // Repeat the profile button's redraw after the dock has had time to finish layout.
+  window.setTimeout(() => {
+    redrawRollingShelf();
+    scheduleShelfRedraw();
+  }, 1200);
 }, { once: true });
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) scheduleShelfRedraw();
