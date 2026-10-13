@@ -82,7 +82,8 @@ function coverURL(book) {
 }
 
 function renderShelf(force = false) {
-  const books = state.books || [];
+  const books = (state.books || []).filter((book) => book && typeof book === "object" && String(book.title || "").trim());
+  if (books.length !== state.books.length) state.books = books;
   const empty = $("#bookshelf-empty"); const track = $("#bookshelf-books"); const viewport = $("#bookshelf-window");
   const signature = JSON.stringify(books.map(({ id, title, author, dateRead, isbn, coverUrl }) => [id, title, author, dateRead, isbn, coverUrl]));
   $("#bookshelf-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
@@ -424,16 +425,22 @@ $("#reading-file").addEventListener("change", async (event) => {
     pendingBooks = []; $("#import-preview").textContent = `Couldn’t read that file: ${error.message || "unsupported format"}`; $("#confirm-import").disabled = true;
   }
 });
-$("#import-form").addEventListener("submit", (event) => {
-  event.preventDefault(); let imported = 0; let refreshed = 0;
+function applyBookImport() {
+  if (!pendingBooks.length) return;
+  let imported = 0; let refreshed = 0;
   for (const book of pendingBooks) {
     const result = addShelfBook(book, { refresh: true });
     if (result === "added") imported++;
     else if (result === "updated") refreshed++;
   }
-  save(); render(); renderShelf(true); $("#import-dialog").close();
+  save();
+  render();
+  renderShelf(true);
+  $("#import-dialog").close();
   showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Shelf refreshed from ${refreshed} ${refreshed === 1 ? "book" : "books"}`);
-});
+}
+$("#confirm-import").addEventListener("click", applyBookImport);
+$("#import-form").addEventListener("submit", (event) => { event.preventDefault(); applyBookImport(); });
 async function openBookDetails(book, context = "history") {
   activeShelfBook = book; activeBookContext = context;
   $("#shelf-detail-title").textContent = book.title;
@@ -636,3 +643,4 @@ render();
 setPage("club");
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
+
