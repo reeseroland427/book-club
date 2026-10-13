@@ -43,7 +43,7 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{border-radius:0 0 1
 .cover-upload-label input{display:block;width:100%;margin-top:6px}
 #shelf-style-dialog{width:min(420px,calc(100% - 32px))}
 @media(max-width:560px){.club-members{gap:7px}.member-chip{padding-right:7px}.club-members .member-label{font-size:7px;letter-spacing:.8px}.club-members .member-add{font-size:8px}.book-detail-layout{grid-template-columns:82px minmax(0,1fr);gap:12px}.book-detail-cover{width:82px}.book-detail-copy h2{font-size:19px}.book-detail-description{font-size:10px}}
-:root{--serif:'Cormorant Garamond',Georgia,serif;--sans:'DM Sans',Arial,sans-serif}
+:root{--serif:'Fraunces',Georgia,serif;--sans:'Manrope',Arial,sans-serif}
 /* Make native file pickers fit the coffee and maroon palette */
 .modal input[type="file"]{background:#604444!important;border:1px solid #815f5b!important;color:#f5e7df!important}
 .modal input[type="file"]::file-selector-button{border:1px solid #a16b6d;border-radius:5px;background:#815057;color:#fff3ed;padding:7px 11px;margin-right:10px;font:600 10px var(--sans);cursor:pointer}
