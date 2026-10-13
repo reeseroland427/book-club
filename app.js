@@ -718,12 +718,26 @@ $("#discover-book-results").addEventListener("click", (event) => {
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 function scheduleShelfRedraw() {
-  requestAnimationFrame(() => requestAnimationFrame(() => renderShelf(true)));
+  let attempts = 0;
+  const redraw = () => {
+    renderShelf(true);
+    const track = $("#bookshelf-books");
+    const hasRenderedBooks = Boolean(track.querySelector(".shelf-book"));
+    if (state.books.length && !hasRenderedBooks && attempts < 8) {
+      attempts += 1;
+      window.setTimeout(() => requestAnimationFrame(redraw), 100);
+    }
+  };
+  requestAnimationFrame(() => requestAnimationFrame(redraw));
 }
 render();
 setPage("club");
 scheduleShelfRedraw();
 window.addEventListener("pageshow", scheduleShelfRedraw);
+window.addEventListener("load", scheduleShelfRedraw, { once: true });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) scheduleShelfRedraw();
+});
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
 
