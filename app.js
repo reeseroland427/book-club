@@ -717,8 +717,13 @@ $("#discover-book-results").addEventListener("click", (event) => {
   else { save(); render(); showToast("Added to your reading history"); }
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+function scheduleShelfRedraw() {
+  requestAnimationFrame(() => requestAnimationFrame(() => renderShelf(true)));
+}
 render();
 setPage("club");
+scheduleShelfRedraw();
+window.addEventListener("pageshow", scheduleShelfRedraw);
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
 
