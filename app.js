@@ -228,6 +228,7 @@ async function runBookSearch(input, target, { rating = true, description = true,
 
 function render() {
   applyShelfStyle();
+  renderShelf();
   const readCount = state.chapters.filter((chapter) => chapter.read).length;
   const total = state.chapters.length;
   const percentage = total ? Math.round(readCount / total * 100) : 0;
@@ -247,7 +248,6 @@ function render() {
   $("#note-count").textContent = notesCount;
   $("#notes-pill").textContent = `${notesCount} ${notesCount === 1 ? "note" : "notes"}`;
 
-  renderShelf();
   renderClub();
   renderProfile();
 
@@ -320,7 +320,7 @@ $("#reset-progress").addEventListener("click", () => {
 
 $("#add-book-open").addEventListener("click", () => { $("#shelf-book-form").reset(); $("#add-book-dialog").showModal(); });
 function redrawRollingShelf({ announce = false } = {}) {
-  render();
+  renderShelf();
   if (announce) showToast(state.books.length ? `Redrew ${state.books.length} books on the rolling shelf` : "Your reading history is empty");
 }
 $("#rebuild-rolling-shelf").addEventListener("click", () => redrawRollingShelf({ announce: true }));
