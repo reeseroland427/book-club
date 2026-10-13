@@ -153,11 +153,15 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .isbn-lookup-status{display:block;margin:-3px 0 12px;color:#c9b8ac;font-size:9px;line-height:1.5}
 #add-book-cover-dropzone{margin-top:7px}
 
-/* Narrow rolling-shelf spines: 1.5 units wide by 9 tall, with no gaps. */
+/* Rolling-shelf spines share a 1.5:9 default, with page-count widths applied per book. */
 .bookshelf-loop{gap:0;padding-right:0}
 .shelf-book{width:15px;height:90px;border-radius:1px 2px 2px 1px}
 .shelf-cover-image{border-radius:1px 2px 2px 1px;object-fit:cover}
 @media(max-width:560px){.bookshelf-loop{gap:0;padding-right:0}.shelf-book{width:12px;height:72px}}
 .profile-shelf-heading.profile-shelf-count{justify-content:space-between;align-items:center}
 .profile-favorites-label{font:600 10px var(--sans);letter-spacing:1.1px;color:#f0e2d9!important}
+.shelf-book{width:var(--spine-width,15px);height:90px;border-radius:1px 2px 2px 1px}
+.shelf-cover-fallback{padding:0}
+.shelf-cover-title{position:absolute;left:50%;top:50%;display:block;width:calc(90px - 10px);max-height:none;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:600 8px/1 var(--serif);writing-mode:horizontal-tb;-webkit-line-clamp:unset;-webkit-box-orient:initial;transform:translate(-50%,-50%) rotate(-90deg);transform-origin:center}
+@media(max-width:560px){.shelf-book{width:var(--spine-mobile-width,12px);height:72px}.shelf-cover-title{width:calc(72px - 10px)}}
 

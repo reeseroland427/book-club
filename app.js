@@ -47,6 +47,7 @@ let profileBookSearchResults = [];
 let pendingAvatarLook = { ...state.profile.avatarLook };
 let pendingAvatarLookChanged = false;
 let pendingAddBookCover = "";
+let pendingAddBookPageCount = 0;
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -66,10 +67,23 @@ function addShelfBook(book, { refresh = false } = {}) {
     existing.id ||= crypto.randomUUID(); existing.title ||= title; existing.author ||= author;
     existing.dateRead ||= book.dateRead || ""; existing.isbn ||= cleanISBN(book.isbn);
     existing.coverUrl ||= safeCoverUrl(book.coverUrl); existing.source ||= book.source || "manual";
+    existing.pageCount ||= cleanPageCount(book.pageCount);
     return "updated";
   }
-  state.books.unshift({ id: crypto.randomUUID(), title, author, dateRead: book.dateRead || "", isbn: cleanISBN(book.isbn), coverUrl: safeCoverUrl(book.coverUrl), source: book.source || "manual" });
+  state.books.unshift({ id: crypto.randomUUID(), title, author, dateRead: book.dateRead || "", isbn: cleanISBN(book.isbn), coverUrl: safeCoverUrl(book.coverUrl), pageCount: cleanPageCount(book.pageCount), source: book.source || "manual" });
   return "added";
+}
+function cleanPageCount(value) {
+  const normalized = String(value ?? "").replace(/,/g, "").match(/\d+/)?.[0];
+  const pageCount = Number(normalized);
+  return Number.isSafeInteger(pageCount) && pageCount > 0 ? pageCount : 0;
+}
+function shelfSpineRatio(value) {
+  const pages = cleanPageCount(value);
+  if (!pages) return 1.5;
+  if (pages <= 100) return 1.3;
+  if (pages >= 1000) return 2;
+  return Number((1.3 + ((pages - 100) / 900) * 0.7).toFixed(3));
 }
 function cleanISBN(value) {
   const isbn = String(value || "").replace(/[^0-9xX]/g, "").toUpperCase();
@@ -96,7 +110,8 @@ function renderShelf() {
 
   const bookMarkup = books.map((book, index) => {
     const cover = coverURL(book);
-    return `<button class="shelf-book shelf-tone-${index % 6}" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span><span class="shelf-cover-rule"></span><span class="shelf-cover-author">${escapeHTML(book.author || "BOOK CLUB")}</span></span>${cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
+    const ratio = shelfSpineRatio(book.pageCount);
+    return `<button class="shelf-book shelf-tone-${index % 6}" style="--spine-ratio:${ratio};--spine-width:${(ratio * 10).toFixed(2)}px;--spine-mobile-width:${(ratio * 8).toFixed(2)}px" data-shelf-book="${escapeHTML(book.id)}" aria-label="${escapeHTML(book.title)} by ${escapeHTML(book.author || "Unknown author")}${book.pageCount ? `, ${book.pageCount} pages` : ""}${book.dateRead ? `, finished ${escapeHTML(book.dateRead)}` : ""}" title="${escapeHTML(book.title)}${book.author ? ` · ${escapeHTML(book.author)}` : ""}"><span class="shelf-cover-fallback"><span class="shelf-cover-title">${escapeHTML(book.title)}</span></span>${cover ? `<img class="shelf-cover-image" src="${escapeHTML(cover)}" alt="" loading="lazy" />` : ""}</button>`;
   }).join("");
   const oneLoop = `<div class="bookshelf-loop">${bookMarkup}</div>`;
   track.style.animation = "none";
@@ -114,6 +129,24 @@ function renderShelf() {
   void track.offsetWidth;
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
+}
+async function enrichShelfPageCounts() {
+  const books = state.books.filter((book) => !cleanPageCount(book.pageCount) && cleanISBN(book.isbn));
+  const isbns = [...new Set(books.map((book) => cleanISBN(book.isbn)))];
+  if (!isbns.length) return;
+  try {
+    const params = new URLSearchParams({ bibkeys: isbns.map((isbn) => `ISBN:${isbn}`).join(","), jscmd: "data", format: "json" });
+    const response = await fetch(`https://openlibrary.org/api/books?${params}`);
+    if (!response.ok) return;
+    const records = await response.json();
+    let changed = false;
+    for (const book of books) {
+      const record = records[`ISBN:${cleanISBN(book.isbn)}`];
+      const pageCount = cleanPageCount(record?.number_of_pages);
+      if (pageCount) { book.pageCount = pageCount; changed = true; }
+    }
+    if (changed) { save(); renderShelf(); }
+  } catch { /* Keep the default spine width when page metadata is unavailable. */ }
 }
 function applyShelfStyle() {
   document.body.dataset.shelfWood = state.shelfStyle.wood;
@@ -224,7 +257,7 @@ function renderFriends(query = "") {
 function catalogBook(doc) {
   const sentence = Array.isArray(doc.first_sentence) ? doc.first_sentence.join(" ") : (doc.first_sentence || "");
   const coverUrl = doc.cover_i ? `https://covers.openlibrary.org/b/id/${encodeURIComponent(doc.cover_i)}-M.jpg?default=false` : "";
-  return { id: String(doc.key || crypto.randomUUID()).replace(/^\//, ""), workKey: doc.key || "", title: doc.title || "Untitled", author: (doc.author_name || []).join(", ") || "Author not listed", isbn: cleanISBN((doc.isbn || [])[0]), coverUrl, description: String(sentence).replace(/\s+/g, " ").trim(), rating: doc.ratings_average || 0, ratingsCount: doc.ratings_count || 0 };
+  return { id: String(doc.key || crypto.randomUUID()).replace(/^\//, ""), workKey: doc.key || "", title: doc.title || "Untitled", author: (doc.author_name || []).join(", ") || "Author not listed", isbn: cleanISBN((doc.isbn || [])[0]), coverUrl, pageCount: cleanPageCount(doc.number_of_pages_median), description: String(sentence).replace(/\s+/g, " ").trim(), rating: doc.ratings_average || 0, ratingsCount: doc.ratings_count || 0 };
 }
 async function enrichCatalogBook(book) {
   if (!book.workKey) return book;
@@ -239,7 +272,7 @@ async function enrichCatalogBook(book) {
   } catch { return book; }
 }
 async function searchBookCatalog(query, enrich = false) {
-  const params = new URLSearchParams({ q: query, limit: "8", fields: "key,title,author_name,cover_i,isbn,ratings_average,ratings_count,first_sentence,first_publish_year" });
+  const params = new URLSearchParams({ q: query, limit: "8", fields: "key,title,author_name,cover_i,isbn,number_of_pages_median,ratings_average,ratings_count,first_sentence,first_publish_year" });
   const response = await fetch(`https://openlibrary.org/search.json?${params}`);
   if (!response.ok) throw new Error("Book search is unavailable right now.");
   const data = await response.json();
@@ -250,7 +283,7 @@ function catalogMarkup(book, options = {}) {
   const action = options.action === undefined ? "catalog-add-book" : options.action;
   const cover = coverURL(book);
   const rating = book.rating ? `★ ${Number(book.rating).toFixed(1)} <small>(${Number(book.ratingsCount).toLocaleString()} ratings)</small>` : "No reader rating yet";
-  return `<article class="catalog-result"><div class="catalog-cover">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span>${escapeHTML(book.title)}</span>`}</div><div class="catalog-info"><h3>${escapeHTML(book.title)}</h3><div class="catalog-author">${escapeHTML(book.author)}</div>${options.rating ? `<div class="catalog-rating">${rating}</div>` : ""}${options.description && book.description ? `<p>${escapeHTML(book.description.slice(0, 280))}${book.description.length > 280 ? "…" : ""}</p>` : ""}${action ? `<button type="button" class="catalog-action" data-${action}="${escapeHTML(book.id)}">${escapeHTML(options.label || "＋ Add to shelf")}</button>` : ""}</div></article>`;
+  return `<article class="catalog-result"><div class="catalog-cover">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span>${escapeHTML(book.title)}</span>`}</div><div class="catalog-info"><h3>${escapeHTML(book.title)}</h3><div class="catalog-author">${escapeHTML(book.author)}</div>${options.rating ? `<div class="catalog-rating">${rating}</div>` : ""}${options.description && book.description ? `<p>${escapeHTML(book.description.slice(0, 280))}${book.description.length > 280 ? "…" : ""}</p>` : ""}${action ? `<button type="button" class="catalog-action" data-${action}="${escapeHTML(book.id)}" data-page-count="${cleanPageCount(book.pageCount)}">${escapeHTML(options.label || "＋ Add to shelf")}</button>` : ""}</div></article>`;
 }
 async function runBookSearch(input, target, { rating = true, description = true, action = "catalog-add-book", label = "＋ Add to shelf" } = {}) {
   const query = input.value.trim();
@@ -331,7 +364,7 @@ $("#chapter-list").addEventListener("click", (event) => {
     if (!chapter.read) state.chapters.slice(index + 1).forEach((later) => { later.read = false; });
     let finishedBook = false;
     if (chapter.read && state.chapters.length && state.chapters.every((item) => item.read)) {
-      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, isbn: state.book.isbn, coverUrl: state.book.coverUrl, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
+      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, isbn: state.book.isbn, coverUrl: state.book.coverUrl, pageCount: state.book.pageCount, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
     }
     save(); render(); showToast(finishedBook ? "Book finished and added to your bookshelf" : chapter.read ? "Chapter marked read · notes unlocked" : "Progress updated"); return;
   }
@@ -358,7 +391,7 @@ $("#reset-progress").addEventListener("click", () => {
 });
 
 $("#add-book-open").addEventListener("click", () => {
-  $("#shelf-book-form").reset(); pendingAddBookCover = "";
+  $("#shelf-book-form").reset(); pendingAddBookCover = ""; pendingAddBookPageCount = 0;
   $("#add-book-isbn-status").textContent = "Title and author stay editable. The lookup uses Open Library.";
   $("#add-book-cover-status").textContent = "Drop a cover here, or choose an image";
   $("#add-book-dialog").showModal();
@@ -418,6 +451,7 @@ async function lookupAddBookISBN() {
     const data = await response.json();
     const match = data[`ISBN:${isbn}`];
     if (!match) { status.textContent = "No match found. Check the ISBN or enter the title and author yourself."; return null; }
+    pendingAddBookPageCount = cleanPageCount(match.number_of_pages);
     const form = $("#shelf-book-form");
     if (!form.elements.title.value.trim()) form.elements.title.value = match.title || "";
     if (!form.elements.author.value.trim()) form.elements.author.value = (match.authors || []).map((author) => author.name).filter(Boolean).join(", ");
@@ -439,12 +473,12 @@ $("#shelf-book-form").addEventListener("submit", async (event) => {
   const rawISBN = form.elements.isbn.value.trim();
   const isbn = cleanISBN(rawISBN);
   if (rawISBN && !isbn) { $("#add-book-isbn-status").textContent = "Enter a valid ISBN-10 or ISBN-13."; form.elements.isbn.focus(); return; }
-  if (isbn && (!form.elements.title.value.trim() || !form.elements.author.value.trim())) await lookupAddBookISBN();
+  if (isbn && !pendingAddBookPageCount) await lookupAddBookISBN();
   const title = form.elements.title.value.trim();
   if (!title) { $("#add-book-isbn-status").textContent = "No title was found. Check the ISBN or enter the book title."; form.elements.title.focus(); return; }
-  const added = addShelfBook({ title, author: form.elements.author.value, isbn, dateRead: form.elements.dateRead.value, coverUrl: pendingAddBookCover });
+  const added = addShelfBook({ title, author: form.elements.author.value, isbn, dateRead: form.elements.dateRead.value, coverUrl: pendingAddBookCover, pageCount: pendingAddBookPageCount });
   if (!added) { showToast("That book is already on your shelf"); return; }
-  pendingAddBookCover = ""; save(); render(); $("#add-book-dialog").close(); showToast("Added to your bookshelf");
+  pendingAddBookCover = ""; pendingAddBookPageCount = 0; save(); render(); $("#add-book-dialog").close(); showToast("Added to your bookshelf");
 });
 async function setPendingAddBookCover(file) {
   if (!file) return;
@@ -514,7 +548,7 @@ function booksFromCSV(text) {
     const dateRead = getValue(["date read", "last date read", "dates read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
     const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10", "isbn uid"]);
     const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
-    const book = importedBook(title, author, dateRead, getValue); if (book) books.push({ ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) });
+    const book = importedBook(title, author, dateRead, getValue); if (book) books.push({ ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl), pageCount: cleanPageCount(getValue(["number of pages", "page count", "pages", "number_of_pages"])) });
   }
   return books;
 }
@@ -532,7 +566,7 @@ function booksFromJSON(text) {
     const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10", "isbn uid"]);
     const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
     const book = importedBook(title, author, dateRead, getValue);
-    return book ? { ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) } : null;
+    return book ? { ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl), pageCount: cleanPageCount(getValue(["number of pages", "page count", "pages", "number_of_pages"])) } : null;
   }).filter(Boolean);
 }
 function renderImportPreview() {
@@ -593,7 +627,7 @@ $("#replace-import").addEventListener("click", () => {
     const key = normalizedBookKey(imported);
     if (replacement.has(key)) continue;
     const saved = previous.get(key);
-    replacement.set(key, { ...(saved || {}), ...imported, id: saved?.id || crypto.randomUUID(), coverUrl: imported.coverUrl || saved?.coverUrl || "", isbn: imported.isbn || saved?.isbn || "" });
+    replacement.set(key, { ...(saved || {}), ...imported, id: saved?.id || crypto.randomUUID(), coverUrl: imported.coverUrl || saved?.coverUrl || "", isbn: imported.isbn || saved?.isbn || "", pageCount: cleanPageCount(imported.pageCount) || cleanPageCount(saved?.pageCount) });
   }
   state.books = [...replacement.values()];
   save(); render(); $("#import-dialog").close();
@@ -865,7 +899,7 @@ $("#current-book-search-results").addEventListener("click", (event) => {
   const button = event.target.closest("[data-set-current-book]"); if (!button) return;
   const book = currentBookResults.find((item) => item.id === button.dataset.setCurrentBook); if (!book) return;
   if ((state.notes.length || state.chapters.some((chapter) => chapter.read)) && !window.confirm("Changing the current book will clear this book’s chapter progress and notes. Continue?")) return;
-  state.book = { title: book.title, author: book.author, description: book.description, isbn: book.isbn, coverUrl: book.coverUrl };
+    state.book = { title: book.title, author: book.author, description: book.description, isbn: book.isbn, coverUrl: book.coverUrl, pageCount: book.pageCount };
   state.chapters = Array.from({ length: 12 }, (_, index) => ({ id: index + 1, title: `Chapter ${index + 1}`, read: false })); state.notes = [];
   save(); render(); $("#current-book-search-dialog").close(); showToast("Current book updated · reading progress reset");
 });
@@ -875,12 +909,13 @@ $("#discover-book-results").addEventListener("click", (event) => {
   const result = button.closest(".catalog-result");
   const title = result.querySelector("h3")?.textContent || ""; const author = result.querySelector(".catalog-author")?.textContent || "";
   const cover = result.querySelector("img")?.src || "";
-  if (!addShelfBook({ title, author, coverUrl: cover, source: "catalog" })) showToast("That book is already on your shelf");
+  if (!addShelfBook({ title, author, coverUrl: cover, pageCount: button.dataset.pageCount, source: "catalog" })) showToast("That book is already on your shelf");
   else { save(); render(); showToast("Added to your reading history"); }
 });
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 render();
 setPage("club");
+enrichShelfPageCounts();
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 window.addEventListener("resize", renderShelf, { passive: true });
 
