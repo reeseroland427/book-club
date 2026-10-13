@@ -18,6 +18,7 @@ state.club.members = Array.isArray(state.club.members) ? state.club.members : st
 state.profile = { ...starter.profile, ...(state.profile || {}) };
 state.profile.avatarLook = { ...starter.profile.avatarLook, ...(state.profile.avatarLook || {}) };
 state.profileBooks = Array.isArray(state.profileBooks) ? state.profileBooks.slice(0, 9) : [];
+state.shelfStyle = { wood: "oak", edge: "straight", ...(state.shelfStyle || {}) };
 let recoveredBookCount = 0;
 if (!state.books.length) {
   for (let index = 0; index < localStorage.length; index++) {
@@ -32,6 +33,7 @@ if (!state.books.length) {
 }
 let activeNoteChapter = null;
 let activeShelfBook = null;
+let activeBookContext = "history";
 let pendingBooks = [];
 let renderedShelfSignature = "";
 let toastTimeout;
@@ -64,6 +66,7 @@ function safeCoverUrl(value) {
   catch { return ""; }
 }
 function coverURL(book) {
+  if (/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(String(book.coverUrl || ""))) return book.coverUrl;
   const direct = safeCoverUrl(book.coverUrl); if (direct) return direct;
   const isbn = cleanISBN(book.isbn); return isbn ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn)}-M.jpg?default=false` : "";
 }
@@ -93,6 +96,10 @@ function renderShelf(force = false) {
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
+function applyShelfStyle() {
+  document.body.dataset.shelfWood = state.shelfStyle.wood;
+  document.body.dataset.shelfEdge = state.shelfStyle.edge;
+}
 
 function setPage(page) {
   activePage = page;
@@ -121,7 +128,7 @@ function renderProfile() {
   $("#profile-book-grid").innerHTML = Array.from({ length: 9 }, (_, index) => {
     const book = state.profileBooks[index];
     const cover = book ? coverURL(book) : "";
-    return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-remove-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="Remove ${escapeHTML(book.title)}" aria-label="Remove ${escapeHTML(book.title)} from favorites">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
+    return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="View ${escapeHTML(book.title)}" aria-label="View ${escapeHTML(book.title)} details">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
   }).join("");
 }
 function ghostAvatarURL(look = {}) {
@@ -191,6 +198,7 @@ async function runBookSearch(input, target, { rating = true, description = true,
 }
 
 function render() {
+  applyShelfStyle();
   const readCount = state.chapters.filter((chapter) => chapter.read).length;
   const total = state.chapters.length;
   const percentage = total ? Math.round(readCount / total * 100) : 0;
@@ -387,17 +395,78 @@ $("#import-form").addEventListener("submit", (event) => {
   for (const book of pendingBooks) if (addShelfBook(book)) imported++;
   save(); render(); $("#import-dialog").close(); showToast(`${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf`);
 });
+async function openBookDetails(book, context = "history") {
+  activeShelfBook = book; activeBookContext = context;
+  $("#shelf-detail-title").textContent = book.title;
+  $("#shelf-detail-author").textContent = book.author ? `by ${book.author}` : "Author not listed";
+  $("#shelf-detail-date").textContent = context === "history" ? `${book.dateRead ? `Finished ${book.dateRead}` : "Finished date not listed"}${book.isbn ? ` · ISBN ${book.isbn}` : ""}` : "On your profile shelf";
+  $("#book-detail-description").textContent = book.description || "Looking for a blurb…";
+  const cover = coverURL(book);
+  $("#book-detail-cover").innerHTML = cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" />` : `<span>${escapeHTML(book.title)}</span>`;
+  $("#book-detail-rating").textContent = book.rating ? `★ ${Number(book.rating).toFixed(1)} · ${Number(book.ratingsCount || 0).toLocaleString()} reader ratings` : "Looking up reader ratings…";
+  $("#remove-shelf-book").textContent = context === "profile" ? "Remove from profile shelf" : "Remove from shelf";
+  $("#remove-shelf-book").hidden = context === "current";
+  $("#book-cover-upload").value = "";
+  $("#shelf-book-dialog").showModal();
+  if (book.description && book.rating) return;
+  try {
+    const results = await searchBookCatalog(book.isbn ? `isbn:${book.isbn}` : `${book.title} ${book.author || ""}`, true);
+    const title = (book.title || "").trim().toLocaleLowerCase();
+    const match = results.find((item) => item.title.trim().toLocaleLowerCase() === title) || results[0];
+    if (!match || activeShelfBook !== book || !$("#shelf-book-dialog").open) return;
+    book.description = match.description || book.description || "No book blurb is available yet.";
+    book.rating = match.rating || book.rating || 0;
+    book.ratingsCount = match.ratingsCount || book.ratingsCount || 0;
+    book.workKey = match.workKey || book.workKey || "";
+    if (!book.coverUrl && match.coverUrl) book.coverUrl = match.coverUrl;
+    $("#book-detail-description").textContent = book.description;
+    $("#book-detail-rating").textContent = book.rating ? `★ ${Number(book.rating).toFixed(1)} · ${Number(book.ratingsCount || 0).toLocaleString()} reader ratings` : "No reader ratings found yet.";
+    const foundCover = coverURL(book);
+    if (foundCover) $("#book-detail-cover").innerHTML = `<img src="${escapeHTML(foundCover)}" alt="Cover of ${escapeHTML(book.title)}" />`;
+    save(); renderShelf(); renderProfile();
+  } catch {
+    if (activeShelfBook === book && $("#shelf-book-dialog").open) {
+      $("#book-detail-description").textContent = book.description || "A blurb could not be found right now.";
+      $("#book-detail-rating").textContent = book.rating ? `★ ${Number(book.rating).toFixed(1)} · ${Number(book.ratingsCount || 0).toLocaleString()} reader ratings` : "Reader ratings could not be loaded.";
+    }
+  }
+}
 $("#bookshelf-books").addEventListener("click", (event) => {
   const button = event.target.closest("[data-shelf-book]"); if (!button) return;
-  activeShelfBook = state.books.find((book) => book.id === button.dataset.shelfBook); if (!activeShelfBook) return;
-  $("#shelf-detail-title").textContent = activeShelfBook.title;
-  $("#shelf-detail-author").textContent = activeShelfBook.author ? `by ${activeShelfBook.author}` : "Author not listed";
-  $("#shelf-detail-date").textContent = `${activeShelfBook.dateRead ? `Finished ${activeShelfBook.dateRead}` : "Finished date not listed"}${activeShelfBook.isbn ? ` · ISBN ${activeShelfBook.isbn}` : ""}`;
-  $("#shelf-book-dialog").showModal();
+  const book = state.books.find((item) => item.id === button.dataset.shelfBook); if (book) openBookDetails(book, "history");
 });
 $("#remove-shelf-book").addEventListener("click", () => {
   if (!activeShelfBook) return;
-  state.books = state.books.filter((book) => book.id !== activeShelfBook.id); activeShelfBook = null; save(); render(); $("#shelf-book-dialog").close(); showToast("Book removed from your shelf");
+  if (activeBookContext === "profile") state.profileBooks = state.profileBooks.filter((book) => book !== activeShelfBook);
+  else state.books = state.books.filter((book) => book !== activeShelfBook);
+  activeShelfBook = null; save(); render(); $("#shelf-book-dialog").close(); showToast("Book removed from your shelf");
+});
+async function readCoverImage(file) {
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  const imageUrl = URL.createObjectURL(file); const image = new Image(); image.src = imageUrl;
+  try {
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; });
+    const canvas = document.createElement("canvas"); canvas.width = 400; canvas.height = 600;
+    const scale = Math.max(400 / image.naturalWidth, 600 / image.naturalHeight); const width = image.naturalWidth * scale; const height = image.naturalHeight * scale;
+    canvas.getContext("2d").drawImage(image, (400 - width) / 2, (600 - height) / 2, width, height);
+    return canvas.toDataURL("image/jpeg", 0.8);
+  } finally { URL.revokeObjectURL(imageUrl); }
+}
+$("#book-cover-upload").addEventListener("change", async (event) => {
+  const file = event.currentTarget.files?.[0]; if (!file || !activeShelfBook) return;
+  try {
+    activeShelfBook.coverUrl = await readCoverImage(file);
+    save(); renderShelf(true); renderProfile();
+    $("#book-detail-cover").innerHTML = `<img src="${escapeHTML(activeShelfBook.coverUrl)}" alt="Uploaded cover of ${escapeHTML(activeShelfBook.title)}" />`;
+    showToast("Book cover updated");
+  } catch (error) { showToast(error.message || "Could not read that cover image"); }
+});
+$("#shelf-style-open").addEventListener("click", () => {
+  $("#shelf-wood").value = state.shelfStyle.wood; $("#shelf-edge").value = state.shelfStyle.edge; $("#shelf-style-dialog").showModal();
+});
+$("#save-shelf-style").addEventListener("click", () => {
+  state.shelfStyle = { wood: $("#shelf-wood").value, edge: $("#shelf-edge").value };
+  applyShelfStyle(); save(); $("#shelf-style-dialog").close(); showToast("Shelf style saved");
 });
 
 $("#edit-club-open").addEventListener("click", () => {
@@ -492,7 +561,7 @@ function toggleProfileBook(book) {
   save(); renderProfile(); renderHistoryChoices();
 }
 $("#choose-profile-books").addEventListener("click", () => { $("#profile-catalog-search").value = ""; renderHistoryChoices(); $("#profile-books-dialog").showModal(); });
-$("#profile-book-grid").addEventListener("click", (event) => { if (event.target.closest("[data-remove-profile-book]")) { const key = event.target.closest("[data-remove-profile-book]").dataset.removeProfileBook; const book = state.profileBooks.find((item) => String(item.id || normalizedBookKey(item)) === key); if (book) toggleProfileBook(book); } else if (event.target.closest("[data-open-book-picker]")) $("#choose-profile-books").click(); });
+$("#profile-book-grid").addEventListener("click", (event) => { const button = event.target.closest("[data-profile-book]"); if (button) { const book = state.profileBooks.find((item) => String(item.id || normalizedBookKey(item)) === button.dataset.profileBook); if (book) openBookDetails(book, "profile"); } else if (event.target.closest("[data-open-book-picker]")) $("#choose-profile-books").click(); });
 $("#profile-catalog-search").addEventListener("input", () => { clearTimeout(searchDelay); searchDelay = setTimeout(async () => { profileBookSearchResults = await runBookSearch($("#profile-catalog-search"), $("#profile-catalog-results"), { rating: false, description: false, action: "profile-catalog-book" }); }, 350); });
 $("#history-book-choices").addEventListener("click", (event) => { const button = event.target.closest("[data-history-profile-book]"); if (!button) return; const book = state.books.find((item) => item.id === button.dataset.historyProfileBook); if (book) toggleProfileBook(book); });
 $("#profile-catalog-results").addEventListener("click", (event) => { const button = event.target.closest("[data-profile-catalog-book]"); if (!button) return; const book = profileBookSearchResults.find((item) => item.id === button.dataset.profileCatalogBook); if (book) toggleProfileBook(book); });
