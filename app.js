@@ -415,10 +415,15 @@ function renderImportPreview() {
 $("#import-books-open").addEventListener("click", () => {
   pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
 });
+async function readImportFile(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const decoder = new TextDecoder(bytes[0] === 0xff && bytes[1] === 0xfe ? "utf-16le" : bytes[0] === 0xfe && bytes[1] === 0xff ? "utf-16be" : "utf-8");
+  return decoder.decode(bytes).replace(/^\uFEFF/, "");
+}
 $("#reading-file").addEventListener("change", async (event) => {
   const file = event.currentTarget.files?.[0]; if (!file) return;
   try {
-    const text = await file.text();
+    const text = await readImportFile(file);
     pendingBooks = /\.json$/i.test(file.name) ? booksFromJSON(text) : booksFromCSV(text);
     renderImportPreview();
   } catch (error) {
