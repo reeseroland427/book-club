@@ -1,6 +1,6 @@
 # The Reading Room
 
-A small, visual-first reading nook for a book club. It includes a current-book page, editable book and chapter details, reading progress, chapter-gated margin notes, and a bookshelf for finished books.
+A small, visual-first reading nook for a book club. It includes Book Club, Profile, and Discover tabs; editable club details; a searchable current read; chapter-gated margin notes; a nine-book profile shelf; and a scrolling bookshelf for finished books.
 
 ## Run it
 
@@ -15,6 +15,12 @@ Each chapter unlocks notes once that chapter and every earlier chapter are marke
 Finished books can be added by hand, imported from Goodreads library CSV files, or imported from CSV/JSON files with Goodreads-compatible fields. Read/finished shelves and completion dates are recognized; files without status or completion-date fields are treated as all finished. Duplicate title/author pairs are skipped. Marking every chapter in the current book read adds it to the shelf automatically. Files are parsed in the browser and are not uploaded to a server.
 
 The shelf looks up cover art by ISBN through the Open Library Covers API. Imported direct cover URLs are also supported. Add or import ISBNs for edition-specific artwork; a designed title card appears when no cover image is available. Cover requests send only the ISBN to Open Library.
+
+## Profiles and book search
+
+The profile tab has an editable display name and avatar. Choose an image or video file to set the avatar; video uploads use a still frame. Pick up to nine profile books from your reading history or search Google Books. Discover searches the Google Books catalog for covers, average reader ratings, rating counts, and descriptions. These searches require an internet connection.
+
+Club name, roster, profile details, selected books, notes, and reading data remain in this browser's local storage. Discover can search the local club roster; separate members cannot yet publish or view one another's profile data. Online profiles and shared club updates need a backend.
 
 ## Current limits
 

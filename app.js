@@ -3,18 +3,28 @@ const starter = {
   book: { title: "The Paper Garden", author: "Your next favorite author", description: "A story for slow evenings, underlined sentences, and conversations that keep going after the last page.", isbn: "" },
   chapters: Array.from({ length: 12 }, (_, i) => ({ id: i + 1, title: `Chapter ${i + 1}`, read: false })),
   notes: [],
-  books: []
+  books: [],
+  club: { name: "The Reading Room", members: ["Reese", "Morgan"] },
+  profile: { name: "Reader", avatar: "ghost-reading.svg" },
+  profileBooks: []
 };
 let state;
 try { state = { ...starter, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") }; }
 catch { state = structuredClone(starter); }
 state.book = { ...starter.book, ...(state.book || {}) };
 state.books = Array.isArray(state.books) ? state.books : [];
+state.club = { ...starter.club, ...(state.club || {}) };
+state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
+state.profile = { ...starter.profile, ...(state.profile || {}) };
+state.profileBooks = Array.isArray(state.profileBooks) ? state.profileBooks.slice(0, 9) : [];
 let activeNoteChapter = null;
 let activeShelfBook = null;
 let pendingBooks = [];
 let renderedShelfSignature = "";
 let toastTimeout;
+let searchDelay;
+let activePage = "club";
+let profileBookSearchResults = [];
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -69,6 +79,72 @@ function renderShelf(force = false) {
   track.querySelectorAll(".shelf-cover-image").forEach((image) => image.addEventListener("error", () => image.remove(), { once: true }));
 }
 
+function setPage(page) {
+  activePage = page;
+  document.body.dataset.activePage = page;
+  document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === page));
+  document.querySelectorAll("[data-page]").forEach((section) => { section.hidden = section.dataset.page !== page; });
+  $(".breadcrumb b").textContent = ({ club: "BOOK CLUB", profile: "PROFILE", discover: "DISCOVER" })[page];
+  if (page === "profile") renderProfile();
+  if (page === "discover") renderFriends();
+}
+document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.tab)));
+
+function renderClub() {
+  $("#club-name-display").textContent = state.club.name;
+  $("#club-member-list").innerHTML = state.club.members.map((name, index) => `<span class="member-chip"><i class="member-avatar avatar-${index % 4}">${escapeHTML(name.trim().charAt(0).toUpperCase() || "R")}</i>${escapeHTML(name)}</span>`).join("");
+  $(".reader-avatars").setAttribute("aria-label", `${state.club.members.length} club members`);
+  $(".reader-avatars").innerHTML = state.club.members.slice(0, 3).map((name, index) => `<i class="avatar-${index % 4}">${escapeHTML(name.trim().charAt(0).toUpperCase() || "R")}</i>`).join("");
+}
+function renderProfile() {
+  $("#profile-name-display").textContent = state.profile.name;
+  $("#profile-avatar").src = state.profile.avatar || "ghost-reading.svg";
+  $("#profile-book-count").textContent = `${state.profileBooks.length} of 9 selected`;
+  $("#profile-book-grid").innerHTML = Array.from({ length: 9 }, (_, index) => {
+    const book = state.profileBooks[index];
+    const cover = book ? coverURL(book) : "";
+    return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-remove-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="Remove ${escapeHTML(book.title)}" aria-label="Remove ${escapeHTML(book.title)} from favorites">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button><span class="profile-book-caption">${escapeHTML(book.title)}</span>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
+  }).join("");
+}
+function renderFriends(query = "") {
+  const needle = query.trim().toLocaleLowerCase();
+  const members = state.club.members.filter((name) => !needle || name.toLocaleLowerCase().includes(needle));
+  $("#friend-results").innerHTML = members.length ? members.map((name, index) => `<button class="friend-result" data-friend="${escapeHTML(name)}"><i class="member-avatar avatar-${index % 4}">${escapeHTML(name.trim().charAt(0).toUpperCase() || "R")}</i><span><strong>${escapeHTML(name)}</strong><small>${name === state.profile.name ? "Your profile" : "Book club member"}</small></span><b>View profile ↗</b></button>`).join("") : `<div class="search-prompt">No club members match that search.</div>`;
+}
+
+function googleBook(item) {
+  const info = item.volumeInfo || {};
+  const isbn = (info.industryIdentifiers || []).find((id) => id.type === "ISBN_13")?.identifier || (info.industryIdentifiers || []).find((id) => id.type === "ISBN_10")?.identifier || "";
+  const rawImage = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || "";
+  const coverUrl = rawImage ? rawImage.replace(/^http:/, "https:").replace("&edge=curl", "") : "";
+  return { id: item.id || crypto.randomUUID(), title: info.title || "Untitled", author: (info.authors || []).join(", ") || "Author not listed", isbn: cleanISBN(isbn), coverUrl, description: (info.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(), rating: info.averageRating || 0, ratingsCount: info.ratingsCount || 0 };
+}
+async function searchGoogleBooks(query) {
+  const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&projection=lite`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Book search is unavailable right now.");
+  const data = await response.json();
+  return (data.items || []).map(googleBook);
+}
+function catalogMarkup(book, options = {}) {
+  const action = options.action === undefined ? "catalog-add-book" : options.action;
+  const cover = coverURL(book);
+  const rating = book.rating ? `★ ${Number(book.rating).toFixed(1)} <small>(${Number(book.ratingsCount).toLocaleString()} ratings)</small>` : "No reader rating yet";
+  return `<article class="catalog-result"><div class="catalog-cover">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span>${escapeHTML(book.title)}</span>`}</div><div class="catalog-info"><h3>${escapeHTML(book.title)}</h3><div class="catalog-author">${escapeHTML(book.author)}</div>${options.rating ? `<div class="catalog-rating">${rating}</div>` : ""}${options.description && book.description ? `<p>${escapeHTML(book.description.slice(0, 280))}${book.description.length > 280 ? "…" : ""}</p>` : ""}${action ? `<button class="catalog-action" data-${action}="${escapeHTML(book.id)}">${escapeHTML(options.label || "＋ Add to shelf")}</button>` : ""}</div></article>`;
+}
+async function runBookSearch(input, target, { rating = true, description = true, action = "catalog-add-book", label = "＋ Add to shelf" } = {}) {
+  const query = input.value.trim();
+  if (query.length < 2) { target.innerHTML = `<div class="search-prompt">Type at least two letters to search the book catalog.</div>`; return []; }
+  target.innerHTML = `<div class="search-prompt">Searching the book catalog…</div>`;
+  try {
+    const books = await searchGoogleBooks(query);
+    target.innerHTML = books.length ? books.map((book) => catalogMarkup(book, { rating, description, action, label })).join("") : `<div class="search-prompt">No books found. Try another title or author.</div>`;
+    return books;
+  } catch (error) {
+    target.innerHTML = `<div class="search-prompt">${escapeHTML(error.message)} Check your connection and try again.</div>`; return [];
+  }
+}
+
 function render() {
   const readCount = state.chapters.filter((chapter) => chapter.read).length;
   const total = state.chapters.length;
@@ -78,6 +154,9 @@ function render() {
   $("#book-description").textContent = state.book.description;
   $("#cover-title").innerHTML = escapeHTML(state.book.title).replace(/\s+/g, "<br />");
   $("#cover-author").textContent = state.book.author.toUpperCase();
+  const currentCover = coverURL(state.book);
+  $("#book-cover").style.backgroundImage = currentCover ? `url("${currentCover.replace(/["\\]/g, "")}")` : "";
+  $("#book-cover").classList.toggle("real-book-cover", Boolean(currentCover));
   $("#chapter-total").textContent = `${total} ${total === 1 ? "chapter" : "chapters"}`;
   $("#progress-percent").textContent = `${percentage}%`;
   $("#progress-fill").style.width = `${percentage}%`;
@@ -87,6 +166,8 @@ function render() {
   $("#notes-pill").textContent = `${notesCount} ${notesCount === 1 ? "note" : "notes"}`;
 
   renderShelf();
+  renderClub();
+  renderProfile();
 
   $("#chapter-list").innerHTML = state.chapters.map((chapter) => {
     const unlocked = isUnlocked(chapter.id);
@@ -112,7 +193,7 @@ $("#edit-book-open").addEventListener("click", openBookDialog);
 $("#edit-book-inline").addEventListener("click", openBookDialog);
 $("#book-form").addEventListener("submit", (event) => {
   event.preventDefault(); const form = event.currentTarget; const count = Number(form.elements.chapters.value);
-  state.book = { title: form.elements.title.value.trim(), author: form.elements.author.value.trim(), isbn: cleanISBN(form.elements.isbn.value), description: form.elements.description.value.trim() };
+  state.book = { ...state.book, title: form.elements.title.value.trim(), author: form.elements.author.value.trim(), isbn: cleanISBN(form.elements.isbn.value), description: form.elements.description.value.trim() };
   if (count < state.chapters.length) {
     const removedIds = new Set(state.chapters.slice(count).map((chapter) => chapter.id));
     state.notes = state.notes.filter((note) => !removedIds.has(note.chapterId));
@@ -129,7 +210,7 @@ $("#chapter-list").addEventListener("click", (event) => {
     if (!chapter.read) state.chapters.slice(index + 1).forEach((later) => { later.read = false; });
     let finishedBook = false;
     if (chapter.read && state.chapters.length && state.chapters.every((item) => item.read)) {
-      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, isbn: state.book.isbn, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
+      finishedBook = addShelfBook({ title: state.book.title, author: state.book.author, isbn: state.book.isbn, coverUrl: state.book.coverUrl, dateRead: new Date().toISOString().slice(0, 10), source: "current-read" });
     }
     save(); render(); showToast(finishedBook ? "Book finished and added to your bookshelf" : chapter.read ? "Chapter marked read · notes unlocked" : "Progress updated"); return;
   }
@@ -273,7 +354,82 @@ $("#remove-shelf-book").addEventListener("click", () => {
   if (!activeShelfBook) return;
   state.books = state.books.filter((book) => book.id !== activeShelfBook.id); activeShelfBook = null; save(); render(); $("#shelf-book-dialog").close(); showToast("Book removed from your shelf");
 });
+
+$("#edit-club-open").addEventListener("click", () => {
+  const form = $("#club-form"); form.elements.name.value = state.club.name; form.elements.members.value = state.club.members.join("\n"); $("#club-dialog").showModal();
+});
+$("#edit-club-members").addEventListener("click", () => $("#edit-club-open").click());
+$("#club-form").addEventListener("submit", (event) => {
+  event.preventDefault(); const form = event.currentTarget;
+  state.club = { name: form.elements.name.value.trim(), members: [...new Set(form.elements.members.value.split(/\r?\n/).map((name) => name.trim()).filter(Boolean))] };
+  save(); render(); $("#club-dialog").close(); showToast("Book club updated");
+});
+$("#edit-profile-open").addEventListener("click", () => { const form = $("#profile-name-form"); form.elements.name.value = state.profile.name; $("#profile-name-dialog").showModal(); });
+$("#profile-name-form").addEventListener("submit", (event) => { event.preventDefault(); state.profile.name = event.currentTarget.elements.name.value.trim(); save(); renderProfile(); $("#profile-name-dialog").close(); showToast("Profile name updated"); });
+$("#avatar-upload").addEventListener("change", async (event) => {
+  const file = event.currentTarget.files?.[0]; if (!file) return;
+  if (file.size > 4 * 1024 * 1024) { showToast("Please choose a file smaller than 4 MB"); event.currentTarget.value = ""; return; }
+  try {
+    let dataUrl;
+    if (file.type.startsWith("video/")) {
+      const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.src = URL.createObjectURL(file);
+      await new Promise((resolve, reject) => { video.onloadeddata = resolve; video.onerror = reject; });
+      video.currentTime = Math.min(0.5, Math.max(0, video.duration / 2));
+      await new Promise((resolve) => { video.onseeked = resolve; if (video.currentTime === 0) resolve(); });
+      const canvas = document.createElement("canvas"); canvas.width = 512; canvas.height = 512;
+      const scale = Math.max(512 / video.videoWidth, 512 / video.videoHeight); const width = video.videoWidth * scale; const height = video.videoHeight * scale;
+      canvas.getContext("2d").drawImage(video, (512 - width) / 2, (512 - height) / 2, width, height); dataUrl = canvas.toDataURL("image/jpeg", 0.86); URL.revokeObjectURL(video.src);
+    } else dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); });
+    state.profile.avatar = dataUrl; save(); renderProfile(); showToast("Avatar updated");
+  } catch { showToast("Could not read that avatar file"); }
+});
+
+function renderHistoryChoices() {
+  const choices = $("#history-book-choices");
+  choices.innerHTML = state.books.length ? state.books.map((book) => {
+    const selected = state.profileBooks.some((item) => normalizedBookKey(item) === normalizedBookKey(book));
+    return `<button type="button" class="history-choice ${selected ? "selected" : ""}" data-history-profile-book="${escapeHTML(book.id)}">${selected ? "✓ " : "+ "}${escapeHTML(book.title)}<small>${escapeHTML(book.author || "")}</small></button>`;
+  }).join("") : `<div class="search-prompt">Your reading history is empty. Search the catalog above to add favorites.</div>`;
+}
+function toggleProfileBook(book) {
+  const key = normalizedBookKey(book); const existing = state.profileBooks.findIndex((item) => normalizedBookKey(item) === key);
+  if (existing >= 0) state.profileBooks.splice(existing, 1);
+  else if (state.profileBooks.length >= 9) { showToast("Your profile shelf has room for nine books"); return; }
+  else state.profileBooks.push({ ...book, id: book.id || key });
+  save(); renderProfile(); renderHistoryChoices();
+}
+$("#choose-profile-books").addEventListener("click", () => { $("#profile-catalog-search").value = ""; renderHistoryChoices(); $("#profile-books-dialog").showModal(); });
+$("#profile-book-grid").addEventListener("click", (event) => { if (event.target.closest("[data-remove-profile-book]")) { const key = event.target.closest("[data-remove-profile-book]").dataset.removeProfileBook; const book = state.profileBooks.find((item) => String(item.id || normalizedBookKey(item)) === key); if (book) toggleProfileBook(book); } else if (event.target.closest("[data-open-book-picker]")) $("#choose-profile-books").click(); });
+$("#profile-catalog-search").addEventListener("input", () => { clearTimeout(searchDelay); searchDelay = setTimeout(async () => { profileBookSearchResults = await runBookSearch($("#profile-catalog-search"), $("#profile-catalog-results"), { rating: false, description: false, action: "profile-catalog-book" }); }, 350); });
+$("#history-book-choices").addEventListener("click", (event) => { const button = event.target.closest("[data-history-profile-book]"); if (!button) return; const book = state.books.find((item) => item.id === button.dataset.historyProfileBook); if (book) toggleProfileBook(book); });
+$("#profile-catalog-results").addEventListener("click", (event) => { const button = event.target.closest("[data-profile-catalog-book]"); if (!button) return; const book = profileBookSearchResults.find((item) => item.id === button.dataset.profileCatalogBook); if (book) toggleProfileBook(book); });
+
+$("#friend-search").addEventListener("input", (event) => renderFriends(event.currentTarget.value));
+$("#friend-results").addEventListener("click", (event) => { const button = event.target.closest("[data-friend]"); if (!button) return; const name = button.dataset.friend; if (name === state.profile.name) setPage("profile"); else showToast(`${name}'s profile can be shared when the club has online profiles`); });
+$("#discover-book-search").addEventListener("input", () => { clearTimeout(searchDelay); searchDelay = setTimeout(async () => { const input = $("#discover-book-search"); const target = $("#discover-book-results"); const books = await runBookSearch(input, target, { rating: true, description: true, action: false }); target.dataset.bookSearch = input.value.trim(); }, 350); });
+
+$("#select-current-book").addEventListener("click", () => { $("#current-book-search-input").value = ""; $("#current-book-search-results").innerHTML = `<div class="search-prompt">Search the book catalog to choose a group read.</div>`; $("#current-book-search-dialog").showModal(); });
+let currentBookResults = [];
+$("#current-book-search-input").addEventListener("input", () => { clearTimeout(searchDelay); searchDelay = setTimeout(async () => { currentBookResults = await runBookSearch($("#current-book-search-input"), $("#current-book-search-results"), { rating: false, description: true, action: "set-current-book", label: "Choose as current read" }); }, 350); });
+$("#current-book-search-results").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-set-current-book]"); if (!button) return;
+  const book = currentBookResults.find((item) => item.id === button.dataset.setCurrentBook); if (!book) return;
+  if ((state.notes.length || state.chapters.some((chapter) => chapter.read)) && !window.confirm("Changing the current book will clear this book’s chapter progress and notes. Continue?")) return;
+  state.book = { title: book.title, author: book.author, description: book.description, isbn: book.isbn, coverUrl: book.coverUrl };
+  state.chapters = Array.from({ length: 12 }, (_, index) => ({ id: index + 1, title: `Chapter ${index + 1}`, read: false })); state.notes = [];
+  save(); render(); $("#current-book-search-dialog").close(); showToast("Current book updated · reading progress reset");
+});
+
+$("#discover-book-results").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-catalog-add-book]"); if (!button) return;
+  const result = button.closest(".catalog-result");
+  const title = result.querySelector("h3")?.textContent || ""; const author = result.querySelector(".catalog-author")?.textContent || "";
+  const cover = result.querySelector("img")?.src || "";
+  if (!addShelfBook({ title, author, coverUrl: cover, source: "catalog" })) showToast("That book is already on your shelf");
+  else { save(); render(); showToast("Added to your reading history"); }
+});
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 render();
+setPage("club");
 window.addEventListener("resize", () => renderShelf(true), { passive: true });
 

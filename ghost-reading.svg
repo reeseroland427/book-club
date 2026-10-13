@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A little ghost reading a book">
+  <defs><radialGradient id="bg" cx="50%" cy="42%" r="72%"><stop stop-color="#f8f5e9"/><stop offset="1" stop-color="#e8eee4"/></radialGradient><linearGradient id="ghost" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#fffefa"/><stop offset="1" stop-color="#e8eadf"/></linearGradient></defs>
+  <circle cx="256" cy="256" r="250" fill="url(#bg)"/>
+  <circle cx="94" cy="122" r="5" fill="#c88d66"/><path d="m100 108 4 9 9 4-9 4-4 9-4-9-9-4 9-4z" fill="#b8825d"/>
+  <path d="M153 394c-11-16-18-34-18-55V207c0-74 51-127 121-127s121 53 121 127v133c0 25-7 45-19 61-12-3-20-18-34-18-15 0-20 20-36 20-17 0-22-20-39-20s-22 20-39 20c-17 0-23-20-39-20-8 0-13 5-18 11z" fill="url(#ghost)" stroke="#d5d9ce" stroke-width="5"/>
+  <ellipse cx="222" cy="217" rx="8" ry="11" fill="#45554a"/><ellipse cx="292" cy="217" rx="8" ry="11" fill="#45554a"/><ellipse cx="197" cy="242" rx="16" ry="8" fill="#e8b9a6" opacity=".62"/><ellipse cx="317" cy="242" rx="16" ry="8" fill="#e8b9a6" opacity=".62"/>
+  <path d="M239 253q17 14 34 0" fill="none" stroke="#71816f" stroke-width="4" stroke-linecap="round"/>
+  <path d="M154 317q46-25 98 1v78q-52-27-98-2z" fill="#cb8864" stroke="#a9674b" stroke-width="4"/><path d="M252 318q52-26 106-1v77q-54-25-106 2z" fill="#78917a" stroke="#5e775f" stroke-width="4"/><path d="M252 319v76" stroke="#f6f0df" stroke-width="5"/><path d="M169 337q35-14 66 0m-66 14q35-14 66 0m33 0q35-14 67 0m-67 14q35-14 67 0" stroke="#f8edda" stroke-width="3" opacity=".8"/>
+  <path d="M159 324q-28-16-36-2-6 11 6 22l29 21m194-42q28-16 36-2 6 11-6 22l-29 21" fill="none" stroke="#e9e9df" stroke-width="19" stroke-linecap="round"/>
+  <path d="M117 405q-12-8-21 0m305-5q12-8 21 0" stroke="#c58a67" stroke-width="4" stroke-linecap="round"/>
+</svg>
+
