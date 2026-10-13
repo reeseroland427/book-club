@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f3ed" />
+    <meta name="description" content="A quiet reading room for your book club." />
+    <title>The Reading Room — Book Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <a class="brand" href="#top" aria-label="The Reading Room home">
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 7.5c4.5-1.3 8-.5 11 2.1v17c-3-2.6-6.5-3.4-11-2.1v-17Zm22 0c-4.5-1.3-8-.5-11 2.1v17c3-2.6 6.5-3.4 11-2.1v-17Z"/><path d="M16 9.6v17"/></svg></span>
+          <span><strong>The Reading Room</strong><small>YOUR LITTLE BOOK CLUB</small></span>
+        </a>
+        <div class="nav-label">YOUR CLUB</div>
+        <nav class="nav-links">
+          <a class="nav-link active" href="#book"><span class="nav-icon">▤</span> Current book</a>
+          <a class="nav-link" href="#chapters"><span class="nav-icon">☷</span> Reading progress</a>
+          <a class="nav-link" href="#notes"><span class="nav-icon">✳</span> Our notes <span class="nav-count" id="note-count">0</span></a>
+        </nav>
+        <div class="sidebar-bottom">
+          <div class="club-note"><span class="tiny-star">✳</span><p>Good books are even better when they’re shared.</p><span>— the reading room</span></div>
+          <button class="edit-book-link" id="edit-book-open"><span>✎</span> Edit book details</button>
+        </div>
+      </aside>
+
+      <main id="top" class="main-content">
+        <header class="topbar">
+          <div class="breadcrumb">THE READING ROOM <span>/</span> <b>NOW READING</b></div>
+          <div class="reader-badge"><span class="online-dot"></span><span>OUR READING NOOK</span><span class="reader-avatars" aria-label="Two club members"><i>R</i><i>M</i></span></div>
+        </header>
+
+        <section class="welcome" id="book">
+          <div class="welcome-copy"><div class="eyebrow"><span></span> OUR CURRENT READ</div><h1>A little space<br />for a <em>good story.</em></h1><p>A cozy corner for the books we read together, the thoughts we collect, and the moments we don’t want to forget.</p></div>
+          <div class="hero-doodle" aria-hidden="true"><span class="doodle-spark">✳</span><div class="doodle-mug"><i></i></div><div class="doodle-book"></div><span class="doodle-leaf">〰</span></div>
+        </section>
+
+        <section class="book-card" aria-label="Current book details">
+          <div class="cover-wrap"><div class="book-cover" id="book-cover"><span class="cover-kicker">A NOVEL</span><span class="cover-title" id="cover-title">The<br />Paper<br />Garden</span><span class="cover-rule"></span><span class="cover-author" id="cover-author">A BOOK CLUB PICK</span><span class="cover-flower">✳</span></div><span class="cover-shadow"></span></div>
+          <div class="book-info"><div class="book-tag"><span class="tag-dot"></span> READING TOGETHER</div><h2 id="book-title">The Paper Garden</h2><div class="book-author">by <span id="book-author">Your next favorite author</span></div><p id="book-description">A story for slow evenings, underlined sentences, and conversations that keep going after the last page.</p><div class="book-meta"><div><span class="meta-icon">▤</span><span><b id="chapter-total">12 chapters</b><small>IN THIS READING</small></span></div><div><span class="meta-icon calendar-icon">◷</span><span><b>At your own pace</b><small>NO RUSH, JUST READ</small></span></div></div><button class="text-button" id="edit-book-inline">Update book details <span>↗</span></button></div>
+          <div class="progress-card"><div class="progress-head"><span>YOUR PROGRESS</span><span id="progress-percent">0%</span></div><div class="progress-track"><span id="progress-fill"></span></div><div class="progress-count"><strong id="progress-count">0 of 12</strong><span>chapters read</span></div><div class="progress-foot"><span class="progress-spark">✳</span> One chapter at a time.</div></div>
+        </section>
+
+        <section class="reading-layout">
+          <div class="chapters-panel" id="chapters"><div class="section-heading"><div><div class="eyebrow small-eyebrow">THE STORY, PIECE BY PIECE</div><h2>Reading progress</h2></div><button class="quiet-button" id="reset-progress">Reset</button></div><p class="section-intro">Mark a chapter as read to open the notes tucked inside.</p><div class="chapter-list" id="chapter-list"></div><button class="add-chapter-button" id="add-chapter">＋ Add a chapter</button></div>
+          <aside class="notes-panel" id="notes"><div class="notes-title-row"><div><div class="eyebrow small-eyebrow">MARGINALIA & MUSINGS</div><h2>Our notes <span class="note-flower">✳</span></h2></div><span class="note-pill" id="notes-pill">0 notes</span></div><p class="section-intro">Little thoughts, questions, and favorite lines from along the way.</p><div id="notes-content"></div></aside>
+        </section>
+        <footer class="footer"><span>Made for the love of a good book</span><span>✳</span><span>YOUR PRIVATE READING CORNER</span></footer>
+      </main>
+    </div>
+
+    <dialog id="book-dialog" class="modal"><form id="book-form" method="dialog"><button class="modal-close" type="button" data-close aria-label="Close">×</button><div class="eyebrow small-eyebrow">MAKE IT YOURS</div><h2>Current book</h2><label>Book title<input name="title" required maxlength="80" /></label><label>Author<input name="author" required maxlength="80" /></label><label>A little about this book<textarea name="description" rows="3" maxlength="240"></textarea></label><label>Number of chapters<input name="chapters" type="number" min="1" max="80" required /></label><div class="modal-actions"><button class="button-secondary" type="button" data-close>Cancel</button><button class="button-primary" type="submit">Save details</button></div></form></dialog>
+    <dialog id="note-dialog" class="modal"><form id="note-form" method="dialog"><button class="modal-close" type="button" data-close aria-label="Close">×</button><div class="eyebrow small-eyebrow" id="note-chapter-label">A NOTE IN THE MARGIN</div><h2>Leave a thought</h2><label>Your name<input name="name" maxlength="24" placeholder="Reader" /></label><label>Your note<textarea name="body" rows="5" required maxlength="500" placeholder="What stayed with you?"></textarea></label><div class="modal-actions"><button class="button-secondary" type="button" data-close>Cancel</button><button class="button-primary" type="submit">Save note</button></div></form></dialog>
+    <dialog id="confirm-dialog" class="modal"><form id="chapter-form" method="dialog"><button class="modal-close" type="button" data-close aria-label="Close">×</button><div class="eyebrow small-eyebrow">GROW THE READING LIST</div><h2>Add a chapter</h2><label>Chapter title<input name="title" required maxlength="80" placeholder="Chapter 13" /></label><div class="modal-actions"><button class="button-secondary" type="button" data-close>Cancel</button><button class="button-primary" type="submit">Add chapter</button></div></form></dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
+
