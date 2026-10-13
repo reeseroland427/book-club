@@ -124,3 +124,26 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .kindle-highlights-import small{color:#d0b9ac;font-size:10px}
 .kindle-highlights-import .import-help{margin:0;font-size:9px;line-height:1.5}
 
+.reading-goal-card,.finished-this-year-card{margin-top:18px;padding:22px 25px;background:#493330;border:1px solid #694d4d;border-radius:12px;box-shadow:0 6px 24px #120b0b24}
+.reading-goal-heading,.finished-this-year-heading{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.reading-goal-heading h2,.finished-this-year-heading h2{margin:6px 0 0;color:#f4e9e0;font:600 22px var(--serif)}
+.reading-goal-heading .button-secondary{padding:8px 12px;font-size:10px}
+.reading-goal-stats{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:19px}
+.reading-goal-stats strong{color:#f0e2d9;font:600 16px var(--serif)}
+.reading-goal-stats span{color:#d1a08f;font:600 11px var(--sans)}
+.reading-goal-track{height:11px;margin-top:9px;overflow:hidden;border:1px solid #785a55;border-radius:99px;background:#342421}
+.reading-goal-track span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#9a625f,#d1a08f);transition:width .35s ease}
+.reading-goal-card>p{margin:8px 0 0;color:#c9b8ac;font-size:10px}
+.finished-this-year-heading>span{color:#c7b4a9;font-size:10px}
+.finished-this-year-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:9px;margin-top:15px}
+.finished-book-card{display:flex;align-items:center;gap:10px;min-width:0;padding:9px;background:#3b2928;border:1px solid #694e4b;border-radius:8px}
+.finished-book-cover{display:grid;place-items:center;width:43px;height:62px;flex:none;overflow:hidden;border-radius:3px;background:#60423a;color:#f2e8df;text-align:center;font:600 8px/1.3 var(--serif);box-shadow:2px 3px 6px #160c0c55}
+.finished-book-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.finished-book-cover span{padding:4px;overflow:hidden}
+.finished-book-copy{display:grid;gap:4px;min-width:0}
+.finished-book-copy strong{overflow:hidden;color:#f0e2d9;font:600 11px/1.3 var(--serif);text-overflow:ellipsis}
+.finished-book-copy span,.finished-book-copy small{overflow:hidden;color:#c1ada2;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+.finished-book-copy small{color:#d1a08f}
+.finished-books-empty{grid-column:1/-1;margin:0;padding:13px;color:#c9b8ac;font-size:10px;background:#3b2928;border:1px dashed #694e4b;border-radius:7px}
+@media(max-width:560px){.reading-goal-card,.finished-this-year-card{padding:17px 13px}.reading-goal-heading h2,.finished-this-year-heading h2{font-size:19px}.finished-this-year-list{grid-template-columns:1fr 1fr;gap:6px}.finished-book-card{gap:7px;padding:7px}.finished-book-cover{width:36px;height:52px}.finished-book-copy strong{font-size:10px}}
+

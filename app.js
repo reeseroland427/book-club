@@ -6,7 +6,7 @@ const starter = {
   books: [],
   highlights: [],
   club: { name: "The Reading Room", members: ["Reese", "Morgan"] },
-  profile: { name: "Reader", avatar: "ghost-reading.png", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "" },
+  profile: { name: "Reader", avatar: "ghost-reading.png", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "", yearlyGoal: 12 },
   profileBooks: []
 };
 let state;
@@ -18,6 +18,7 @@ state.highlights = Array.isArray(state.highlights) ? state.highlights : [];
 state.club = { ...starter.club, ...(state.club || {}) };
 state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
 state.profile = { ...starter.profile, ...(state.profile || {}) };
+state.profile.yearlyGoal = Math.min(366, Math.max(1, Number.parseInt(state.profile.yearlyGoal, 10) || starter.profile.yearlyGoal));
 if (state.profile.avatar === "ghost-reading.svg") state.profile.avatar = "ghost-reading.png";
 state.profile.avatarLook = { ...starter.profile.avatarLook, ...(state.profile.avatarLook || {}) };
 state.profileBooks = Array.isArray(state.profileBooks) ? state.profileBooks.slice(0, 9) : [];
@@ -148,7 +149,40 @@ function renderProfile() {
     const cover = book ? coverURL(book) : "";
     return `<div class="profile-shelf-slot">${book ? `<button class="profile-book-cover" data-profile-book="${escapeHTML(book.id || normalizedBookKey(book))}" title="View ${escapeHTML(book.title)}" aria-label="View ${escapeHTML(book.title)} details">${cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span class="profile-cover-fallback">${escapeHTML(book.title)}</span>`}</button>` : `<button class="profile-book-empty" data-open-book-picker aria-label="Choose a book for shelf slot ${index + 1}"><span>＋</span><small>Choose a book</small></button>`}</div>`;
   }).join("");
+  renderReadingGoal();
+  renderBooksFinishedThisYear();
   renderHistoryManager();
+}
+function booksFinishedThisYear() {
+  const year = new Date().getFullYear();
+  return state.books.filter((book) => {
+    if (!book?.dateRead) return false;
+    const date = new Date(book.dateRead);
+    return !Number.isNaN(date.getTime()) && date.getFullYear() === year;
+  });
+}
+function renderReadingGoal() {
+  const year = new Date().getFullYear();
+  const finished = booksFinishedThisYear().length;
+  const goal = state.profile.yearlyGoal;
+  const percent = Math.min(100, Math.round((finished / goal) * 100));
+  $("#reading-goal-year").textContent = `${year} READING GOAL`;
+  $("#reading-goal-progress").textContent = `${finished} of ${goal} books`;
+  $("#reading-goal-percent").textContent = `${percent}%`;
+  $("#reading-goal-fill").style.width = `${percent}%`;
+  $("#reading-goal-track").setAttribute("aria-valuenow", String(percent));
+  $("#reading-goal-note").textContent = finished >= goal ? `Goal reached — ${finished} books finished this year.` : `${goal - finished} ${goal - finished === 1 ? "book" : "books"} to reach your goal.`;
+}
+function renderBooksFinishedThisYear() {
+  const year = new Date().getFullYear();
+  const books = booksFinishedThisYear();
+  $("#finished-this-year-title").textContent = `Finished in ${year}`;
+  $("#finished-this-year-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
+  $("#finished-this-year-list").innerHTML = books.length ? books.map((book) => {
+    const cover = coverURL(book);
+    const coverContent = cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span>${escapeHTML(book.title)}</span>`;
+    return `<article class="finished-book-card"><div class="finished-book-cover">${coverContent}</div><div class="finished-book-copy"><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author || "Author not listed")}</span><small>Finished ${escapeHTML(book.dateRead)}</small></div></article>`;
+  }).join("") : `<p class="finished-books-empty">Books with a finish date in ${year} will appear here.</p>`;
 }
 function renderHistoryManager() {
   const books = state.books.filter((book) => book && typeof book === "object" && String(book.title || "").trim());
@@ -685,6 +719,18 @@ $("#profile-name-form").addEventListener("submit", (event) => {
   if (quote && !form.querySelector('[name="quoteBook"]').value) { showToast("Choose the book that quote is from"); return; }
   state.profile.name = form.querySelector('[name="name"]').value.trim(); state.profile.quote = quote; state.profile.quoteBook = form.querySelector('[name="quoteBook"]').value;
   save(); renderProfile(); $("#profile-name-dialog").close(); showToast("Profile updated");
+});
+$("#edit-reading-goal").addEventListener("click", () => {
+  $("#reading-goal-form").elements.yearlyGoal.value = state.profile.yearlyGoal;
+  $("#reading-goal-dialog").showModal();
+});
+$("#reading-goal-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = event.currentTarget.elements.yearlyGoal;
+  const goal = Number.parseInt(input.value, 10);
+  if (!Number.isInteger(goal) || goal < 1 || goal > 366) { input.focus(); showToast("Choose a goal between 1 and 366 books"); return; }
+  state.profile.yearlyGoal = goal;
+  save(); renderReadingGoal(); $("#reading-goal-dialog").close(); showToast("Reading goal saved");
 });
 
 function selectedAvatarLook() { return { hat: $("#avatar-hat").value, pet: $("#avatar-pet").value, bookColor: $("#avatar-book-color").value }; }
