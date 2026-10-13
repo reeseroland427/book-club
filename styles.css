@@ -120,3 +120,7 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .current-book-search:hover{background:#604444;border-color:#80625d;color:#f4ddd2}
 .reading-history-list::-webkit-scrollbar-thumb:hover{background:#a16b6d}
 
+.kindle-highlights-import{display:grid;gap:8px;margin-top:16px;padding:13px;border:1px solid #684d4b;border-radius:8px;background:#3b2928}
+.kindle-highlights-import small{color:#d0b9ac;font-size:10px}
+.kindle-highlights-import .import-help{margin:0;font-size:9px;line-height:1.5}
+

@@ -29,3 +29,4 @@ This is a local prototype. Book details, progress, notes, and the bookshelf are 
 ## Visual editing
 
 Most of the visual system lives in `styles.css`; content and interactions live in `index.html` and `app.js`. The colors and type scale are defined as CSS variables at the top of the stylesheet.
+

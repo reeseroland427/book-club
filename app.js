@@ -4,6 +4,7 @@ const starter = {
   chapters: Array.from({ length: 12 }, (_, i) => ({ id: i + 1, title: `Chapter ${i + 1}`, read: false })),
   notes: [],
   books: [],
+  highlights: [],
   club: { name: "The Reading Room", members: ["Reese", "Morgan"] },
   profile: { name: "Reader", avatar: "ghost-reading.png", avatarLook: { hat: "none", pet: "none", bookColor: "paper" }, quote: "", quoteBook: "" },
   profileBooks: []
@@ -13,6 +14,7 @@ try { state = { ...starter, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || "
 catch { state = structuredClone(starter); }
 state.book = { ...starter.book, ...(state.book || {}) };
 state.books = Array.isArray(state.books) ? state.books : [];
+state.highlights = Array.isArray(state.highlights) ? state.highlights : [];
 state.club = { ...starter.club, ...(state.club || {}) };
 state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
 state.profile = { ...starter.profile, ...(state.profile || {}) };
@@ -606,15 +608,77 @@ $("#save-club-changes").addEventListener("click", commitClubEdits);
 $("#club-form").addEventListener("submit", (event) => { event.preventDefault(); commitClubEdits(); });
 function fillQuoteBookOptions() {
   const select = $("#quote-book-select");
-  select.innerHTML = `<option value="">Choose a read book</option>` + state.books.map((book) => {
+  const books = [...state.books];
+  for (const highlight of state.highlights) {
+    if (!books.some((book) => book.title.trim().toLocaleLowerCase() === highlight.bookTitle.trim().toLocaleLowerCase())) {
+      books.push({ title: highlight.bookTitle, author: highlight.author || "" });
+    }
+  }
+  select.innerHTML = `<option value="">Choose a read book</option>` + books.map((book) => {
     const label = `${book.title}${book.author ? ` — ${book.author}` : ""}`;
     return `<option value="${escapeHTML(label)}">${escapeHTML(label)}</option>`;
   }).join("");
   select.value = state.profile.quoteBook || "";
 }
+function parseKindleClippings(rawText) {
+  const text = rawText.includes("\u0000") ? rawText.replace(/\u0000/g, "") : rawText;
+  return text.split(/\r?\n={10,}\r?\n?/).flatMap((chunk) => {
+    const lines = chunk.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (lines.length < 3 || !/your highlight/i.test(lines[1])) return [];
+    const match = lines[0].match(/^(.*)\s+\(([^()]*)\)$/);
+    const bookTitle = (match ? match[1] : lines[0]).trim();
+    const author = match ? match[2].trim() : "";
+    const quote = lines.slice(2).join(" ").trim();
+    if (!bookTitle || !quote) return [];
+    return [{ bookTitle, author, text: quote }];
+  });
+}
+function fillProfileHighlightOptions() {
+  const select = $("#profile-highlight-select");
+  const highlights = state.highlights || [];
+  select.innerHTML = `<option value="">Choose an imported highlight…</option>` + highlights.map((highlight, index) => {
+    const preview = highlight.text.length > 110 ? `${highlight.text.slice(0, 110)}…` : highlight.text;
+    return `<option value="${index}">${escapeHTML(highlight.bookTitle)} — ${escapeHTML(preview)}</option>`;
+  }).join("");
+  $("#kindle-highlight-count").textContent = highlights.length ? `${highlights.length} highlights imported` : "No Kindle highlights imported yet";
+}
+$("#profile-highlight-select").addEventListener("change", (event) => {
+  const highlight = state.highlights[Number(event.currentTarget.value)];
+  if (!highlight) return;
+  const form = $("#profile-name-form");
+  form.querySelector('[name="quote"]').value = highlight.text.slice(0, 280);
+  const book = [...state.books, ...state.highlights.map((item) => ({ title: item.bookTitle, author: item.author }))]
+    .find((item) => item.title.trim().toLocaleLowerCase() === highlight.bookTitle.trim().toLocaleLowerCase());
+  const label = book ? `${book.title}${book.author ? ` — ${book.author}` : ""}` : highlight.bookTitle;
+  $("#quote-book-select").value = label;
+});
+$("#kindle-highlights-file").addEventListener("change", async (event) => {
+  const input = event.currentTarget;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    let contents = await file.text();
+    if (contents.includes("\u0000")) {
+      const buffer = await file.arrayBuffer();
+      contents = new TextDecoder("utf-16le").decode(buffer);
+    }
+    const imported = parseKindleClippings(contents);
+    const existing = new Set(state.highlights.map((item) => `${item.bookTitle.toLocaleLowerCase()}|${item.text.toLocaleLowerCase()}`));
+    for (const item of imported) {
+      const key = `${item.bookTitle.toLocaleLowerCase()}|${item.text.toLocaleLowerCase()}`;
+      if (!existing.has(key)) { state.highlights.push(item); existing.add(key); }
+    }
+    save(); fillQuoteBookOptions(); fillProfileHighlightOptions();
+    showToast(imported.length ? `${imported.length} Kindle highlights found` : "No Kindle highlights found in that file");
+  } catch {
+    showToast("Couldn’t read that Kindle clippings file");
+  } finally {
+    input.value = "";
+  }
+});
 $("#edit-profile-open").addEventListener("click", () => {
   const form = $("#profile-name-form"); form.querySelector('[name="name"]').value = state.profile.name;
-  form.querySelector('[name="quote"]').value = state.profile.quote || ""; fillQuoteBookOptions(); $("#profile-name-dialog").showModal();
+  form.querySelector('[name="quote"]').value = state.profile.quote || ""; fillQuoteBookOptions(); fillProfileHighlightOptions(); $("#profile-name-dialog").showModal();
 });
 $("#profile-name-form").addEventListener("submit", (event) => {
   event.preventDefault(); const form = event.currentTarget; const quote = form.querySelector('[name="quote"]').value.trim();
