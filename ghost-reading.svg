@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A little ghost reading a book from a three-quarter angle">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="A quiet ghost reading an open book">
   <circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/>
-  <path d="M144 397c-13-17-19-37-19-60V218c0-72 48-127 116-132 72-5 126 49 126 124v129c0 31-10 55-27 72-13-4-21-16-34-16-16 0-22 19-38 19s-22-19-39-19-24 19-40 19-23-19-39-19c-2 0-4 1-6 2Z" fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M205 104q47-30 94 1" fill="none" stroke="#565e58" stroke-width="3" stroke-linecap="round" opacity=".65"/>
-  <ellipse cx="216" cy="215" rx="7" ry="10" fill="#343b36"/><ellipse cx="278" cy="224" rx="7" ry="10" fill="#343b36"/>
-  <path d="M236 250q14 11 27 1" fill="none" stroke="#343b36" stroke-width="4" stroke-linecap="round"/>
-  <path d="M151 321q47-26 103 0v77q-56-27-103 1zM254 321q55-27 105-1v78q-50-25-105 0z" fill="#fffefa" stroke="#343b36" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M254 322v76M166 340q34-15 71-1m-71 17q34-15 71-1m32-16q35-15 70-1m-70 17q35-15 70-1" fill="none" stroke="#505751" stroke-width="3" stroke-linecap="round"/>
-  <path d="M151 324q-25-19-37-4-8 12 5 26l34 28m103-51q35-23 67-18" fill="none" stroke="#343b36" stroke-width="17" stroke-linecap="round"/>
-  <path d="m101 130 3 8 8 3-8 3-3 8-3-8-8-3 8-3zM408 157l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="none" stroke="#626a64" stroke-width="2" stroke-linejoin="round"/>
+  <g fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M177 460c-15 18-34 17-48-1-13-17-24-25-36-39-10-13-5-29-1-43l10-40c6-22 22-37 43-52l30-24c-24-21-39-51-37-82 1-43 21-80 53-107 29-24 61-37 93-35 37 2 66 19 88 46 24 28 44 57 63 86 23 34 40 69 51 105 9 30 15 55 11 74-4 21-21 34-41 45-26 14-53 14-81 21l-50 11c3 21 11 43 3 60-8 17-29 26-49 24-21-2-36-21-55-29-15-6-27 0-35 11-11 15-24 19-38 11z"/>
+    <ellipse cx="171" cy="148" rx="10" ry="19" transform="rotate(-24 171 148)" fill="#343b36" stroke="none"/>
+    <path d="M24 245q-2-12 8-22l29-23 85 58 37-30 96 73-13 22-105-44-65 28-53-34q-17-10-19-28z" fill="#fffefa"/>
+    <path d="m64 205 32 99m50-46 17 25m-65 21q34-28 68-17m-1-48 92 68" fill="none" stroke="#343b36" stroke-width="4"/>
+    <path d="M99 314c23-24 48-37 71-36 21 1 52 19 77 38 11 8 17 15 12 22-6 8-14 3-21-1l-58-29c-15-7-33-3-48 7l-20 17zM257 327c17-18 36-29 51-27 13 2 17 14 8 24-17 16-35 24-55 28" fill="#fffefa"/>
+    <path d="M174 285c38 5 74 28 104 53m-79 77c24-7 41 1 57 15 14 12 28 14 45 8m-211-99c-9 14-14 30-18 50" fill="none"/>
+  </g>
 </svg>
 

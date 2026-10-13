@@ -135,16 +135,27 @@ function ghostAvatarURL(look = {}) {
   const bookColors = { paper: "#fffefa", coffee: "#76604f", maroon: "#713d48", sage: "#879486", blue: "#667783" };
   const bookColor = bookColors[look.bookColor] || bookColors.paper;
   const hats = {
-    beret: `<path d="M178 116q38-36 88-22 22 7 32 27-42 22-111 12z"/><path d="M187 125q44 7 99-7"/>`,
-    beanie: `<path d="M181 123q4-43 54-47 43-2 60 39l-8 17q-48-10-106 2z"/><path d="M183 119q50 12 108-2"/><circle cx="236" cy="72" r="7"/>`,
-    witch: `<path d="m190 117 37-70 41 71q-37-13-78-1z"/><path d="M182 119q50-16 96 2 4 8-7 11-44-12-88 2-10-5-1-15z"/>`
+    beret: `<path d="M176 80q38-37 86-23 21 7 30 25-42 20-108 12z"/><path d="M184 87q44 7 97-7"/>`,
+    beanie: `<path d="M178 83q7-43 52-49 42-3 60 38l-8 15q-48-9-102 3z"/><path d="M180 80q49 11 105-2"/><circle cx="231" cy="33" r="7"/>`,
+    witch: `<path d="m185 78 38-67 38 69q-37-12-76-2z"/><path d="M177 81q49-16 93 1 5 7-6 11-43-11-85 2-10-5-2-14z"/>`
   };
   const pets = {
-    cat: `<g transform="translate(346 300)"><path d="m0 19 2-25 18 14 16-16 6 31q-2 23-22 24Q2 44 0 19z"/><path d="M12 22h1m16 0h1m-11 9q4 3 8 0m-10-3-10-3m10 8-10 3m21-8 10-3m-10 8 10 3"/></g>`,
-    bird: `<g transform="translate(359 320)"><path d="M0 20q4-25 27-24 23 1 26 24-14-10-27 1Q13 12 0 20z"/><path d="m49 17 12 5-12 5M21 44v10m17-10v10m-29 0h27"/><circle cx="36" cy="8" r="2" fill="#343b36"/></g>`
+    cat: `<g transform="translate(377 346)"><path d="m0 19 2-25 18 14 16-16 6 31q-2 23-22 24Q2 44 0 19z"/><path d="M12 22h1m16 0h1m-11 9q4 3 8 0m-10-3-10-3m10 8-10 3m21-8 10-3m-10 8 10 3"/></g>`,
+    bird: `<g transform="translate(386 358)"><path d="M0 20q4-25 27-24 23 1 26 24-14-10-27 1Q13 12 0 20z"/><path d="m49 17 12 5-12 5M21 44v10m17-10v10m-29 0h27"/><circle cx="36" cy="8" r="2" fill="#343b36"/></g>`
   };
   const hat = hats[look.hat] || ""; const pet = pets[look.pet] || "";
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/><g fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M143 398c-13-18-18-38-18-61V217c0-73 48-128 116-132 74-4 127 50 127 125v126c0 31-10 54-27 70-14-4-21-16-34-16-16 0-23 19-39 19s-22-19-39-19-24 19-40 19-24-19-40-19c-2 0-4 1-6 2z"/>${hat}<path d="M151 321q47-26 103 0v77q-56-27-103 1z" fill="${bookColor}"/><path d="M254 321q55-27 105-1v78q-50-25-105 0z" fill="${bookColor}"/><path d="M254 322v76M166 340q34-15 71-1m-71 17q34-15 71-1m32-16q35-15 70-1m-70 17q35-15 70-1" fill="none" stroke="#505751" stroke-width="3"/><path d="M151 324q-25-19-37-4-8 12 5 26l34 28m103-51q35-23 67-18" fill="none" stroke-width="17"/></g><g fill="none" stroke="#343b36" stroke-width="5" stroke-linecap="round"><ellipse cx="216" cy="215" rx="7" ry="10" fill="#343b36"/><ellipse cx="278" cy="224" rx="7" ry="10" fill="#343b36"/><path d="M236 250q14 11 27 1" stroke-width="4"/>${pet}</g></svg>`;
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
+    '<circle cx="256" cy="256" r="248" fill="#fbfaf6" stroke="#343b36" stroke-width="3"/>' +
+    '<g fill="#fffefa" stroke="#343b36" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M177 460c-15 18-34 17-48-1-13-17-24-25-36-39-10-13-5-29-1-43l10-40c6-22 22-37 43-52l30-24c-24-21-39-51-37-82 1-43 21-80 53-107 29-24 61-37 93-35 37 2 66 19 88 46 24 28 44 57 63 86 23 34 40 69 51 105 9 30 15 55 11 74-4 21-21 34-41 45-26 14-53 14-81 21l-50 11c3 21 11 43 3 60-8 17-29 26-49 24-21-2-36-21-55-29-15-6-27 0-35 11-11 15-24 19-38 11z"/>' +
+    '<ellipse cx="171" cy="148" rx="10" ry="19" transform="rotate(-24 171 148)" fill="#343b36" stroke="none"/>' +
+    hat +
+    '<path d="M24 245q-2-12 8-22l29-23 85 58 37-30 96 73-13 22-105-44-65 28-53-34q-17-10-19-28z" fill="' + bookColor + '"/>' +
+    '<path d="m64 205 32 99m50-46 17 25m-65 21q34-28 68-17m-1-48 92 68" fill="none" stroke="#343b36" stroke-width="4"/>' +
+    '<path d="M99 314c23-24 48-37 71-36 21 1 52 19 77 38 11 8 17 15 12 22-6 8-14 3-21-1l-58-29c-15-7-33-3-48 7l-20 17z" fill="#fffefa"/>' +
+    '<path d="M257 327c17-18 36-29 51-27 13 2 17 14 8 24-17 16-35 24-55 28" fill="#fffefa"/>' +
+    '<path d="M174 285c38 5 74 28 104 53m-79 77c24-7 41 1 57 15 14 12 28 14 45 8m-211-99c-9 14-14 30-18 50" fill="none"/>' +
+    '</g><g fill="none" stroke="#343b36" stroke-width="5" stroke-linecap="round">' + pet + '</g></svg>';
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 function renderFriends(query = "") {
@@ -298,28 +309,33 @@ $("#shelf-book-form").addEventListener("submit", (event) => {
 });
 
 function parseCSV(text) {
-  const rows = []; let row = []; let cell = ""; let quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (quoted) {
-      if (char === '"' && text[i + 1] === '"') { cell += '"'; i++; }
-      else if (char === '"') quoted = false;
-      else cell += char;
-    } else if (char === '"') quoted = true;
-    else if (char === ",") { row.push(cell); cell = ""; }
-    else if (char === "\n" || char === "\r") {
-      if (char === "\r" && text[i + 1] === "\n") i++;
-      row.push(cell); cell = "";
-      if (row.some((value) => value.trim())) rows.push(row);
-      row = [];
-    } else cell += char;
-  }
-  row.push(cell); if (row.some((value) => value.trim())) rows.push(row);
-  return rows;
+  const parseWithDelimiter = (delimiter) => {
+    const rows = []; let row = []; let cell = ""; let quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      if (quoted) {
+        if (char === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (char === '"') quoted = false;
+        else cell += char;
+      } else if (char === '"') quoted = true;
+      else if (char === delimiter) { row.push(cell); cell = ""; }
+      else if (char === "\n" || char === "\r") {
+        if (char === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); cell = "";
+        if (row.some((value) => value.trim())) rows.push(row);
+        row = [];
+      } else cell += char;
+    }
+    row.push(cell); if (row.some((value) => value.trim())) rows.push(row);
+    return rows;
+  };
+  const candidates = [",", ";", "\t"].map(parseWithDelimiter);
+  const headerScore = (rows) => (rows[0] || []).filter((value) => ["title", "author", "authors", "read status"].includes(normalizeHeader(value))).length;
+  return candidates.sort((a, b) => headerScore(b) - headerScore(a) || (b[0]?.length || 0) - (a[0]?.length || 0))[0];
 }
 const normalizeHeader = (value) => String(value || "").replace(/^\uFEFF/, "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 function rowIsRead(getValue) {
-  const dateRead = getValue(["date read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
+  const dateRead = getValue(["date read", "last date read", "dates read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
   if (String(dateRead || "").trim()) return true;
   const shelf = getValue(["exclusive shelf", "shelf", "status", "reading status", "read status", "state"]);
   const shelves = getValue(["bookshelves", "shelves", "tags"]);
@@ -345,8 +361,8 @@ function booksFromCSV(text) {
     const getValue = valueFor(cells);
     const title = getValue(["title", "book title", "name", "book name"]);
     const author = getValue(["author", "authors", "book author", "primary author"]);
-    const dateRead = getValue(["date read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
-    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10"]);
+    const dateRead = getValue(["date read", "last date read", "dates read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
+    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10", "isbn uid"]);
     const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
     const book = importedBook(title, author, dateRead, getValue); if (book) books.push({ ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) });
   }
@@ -362,8 +378,8 @@ function booksFromJSON(text) {
     const getValue = (aliases) => { for (const alias of aliases) { const value = fields.get(normalizeHeader(alias)); if (value != null) return value; } return ""; };
     const title = getValue(["title", "book title", "name", "book name"]);
     const author = getValue(["author", "authors", "book author", "primary author"]);
-    const dateRead = getValue(["date read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
-    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10"]);
+    const dateRead = getValue(["date read", "last date read", "dates read", "date finished", "finished date", "completed at", "date completed", "read at", "read date"]);
+    const isbn = getValue(["isbn13", "isbn 13", "isbn", "isbn10", "isbn 10", "isbn uid"]);
     const coverUrl = getValue(["cover url", "cover image url", "image url", "cover", "image"]);
     const book = importedBook(title, author, dateRead, getValue);
     return book ? { ...book, isbn: cleanISBN(isbn), coverUrl: safeCoverUrl(coverUrl) } : null;
@@ -374,7 +390,7 @@ function renderImportPreview() {
   const unique = new Set(); let duplicates = 0;
   pendingBooks.forEach((book) => { const key = normalizedBookKey(book); if (existing.has(key) || unique.has(key)) duplicates++; else unique.add(key); });
   const additions = unique.size;
-  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : "No new read books found. Check that the file has title and author columns and a read shelf, status, or finished date.";
+  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : pendingBooks.length ? `No new books to import. ${duplicates} entries are already on your shelf or repeated in the file.` : "No read books found. Make sure the file includes Title and Authors plus a Read Status, Last Date Read, or Dates Read column.";
   $("#confirm-import").disabled = additions === 0;
 }
 $("#import-books-open").addEventListener("click", () => {
