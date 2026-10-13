@@ -400,9 +400,11 @@ function renderImportPreview() {
     else unique.add(key);
   });
   const additions = unique.size;
-  $("#import-preview").textContent = additions ? `${additions} read ${additions === 1 ? "book" : "books"} ready to import${duplicates ? ` · ${duplicates} duplicate${duplicates === 1 ? "" : "s"} will be skipped` : ""}. The file stays here; cover ISBNs are looked up with Open Library.` : "No new read books found. Check that the file has title and author columns and a read shelf, status, or finished date.";
-  $("#confirm-import").disabled = additions === 0;
-  $("#confirm-import").textContent = "Import books";
+  $("#import-preview").textContent = pendingBooks.length
+    ? `${pendingBooks.length} read-book rows detected · ${additions} new ${additions === 1 ? "book" : "books"}${duplicates ? ` · ${duplicates} already saved or repeated and will refresh the shelf` : ""}. The file stays here; cover ISBNs are looked up with Open Library.`
+    : "No read books detected. Check for Title and Authors columns and a Read Status or completion-date field.";
+  $("#confirm-import").disabled = pendingBooks.length === 0;
+  $("#confirm-import").textContent = pendingBooks.length && additions === 0 ? "Refresh shelf" : "Import books";
 }
 $("#import-books-open").addEventListener("click", () => {
   pendingBooks = []; $("#import-form").reset(); $("#import-preview").textContent = "Your file is read in this browser, not uploaded. ISBN cover lookups go to Open Library."; $("#confirm-import").disabled = true; $("#import-dialog").showModal();
@@ -423,9 +425,14 @@ $("#reading-file").addEventListener("change", async (event) => {
   }
 });
 $("#import-form").addEventListener("submit", (event) => {
-  event.preventDefault(); let imported = 0;
-  for (const book of pendingBooks) if (addShelfBook(book)) imported++;
-  save(); render(); $("#import-dialog").close(); showToast(`${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf`);
+  event.preventDefault(); let imported = 0; let refreshed = 0;
+  for (const book of pendingBooks) {
+    const result = addShelfBook(book, { refresh: true });
+    if (result === "added") imported++;
+    else if (result === "updated") refreshed++;
+  }
+  save(); render(); renderShelf(true); $("#import-dialog").close();
+  showToast(imported ? `${imported} ${imported === 1 ? "book" : "books"} added to your bookshelf` : `Shelf refreshed from ${refreshed} ${refreshed === 1 ? "book" : "books"}`);
 });
 async function openBookDetails(book, context = "history") {
   activeShelfBook = book; activeBookContext = context;
