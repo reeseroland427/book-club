@@ -158,4 +158,6 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .shelf-book{width:15px;height:90px;border-radius:1px 2px 2px 1px}
 .shelf-cover-image{border-radius:1px 2px 2px 1px;object-fit:cover}
 @media(max-width:560px){.bookshelf-loop{gap:0;padding-right:0}.shelf-book{width:12px;height:72px}}
+.profile-shelf-heading.profile-shelf-count{justify-content:space-between;align-items:center}
+.profile-favorites-label{font:600 10px var(--sans);letter-spacing:1.1px;color:#f0e2d9!important}
 

@@ -181,7 +181,8 @@ function renderBooksFinishedThisYear() {
   $("#finished-this-year-title").textContent = `Finished in ${year}`;
   $("#finished-this-year-count").textContent = `${books.length} ${books.length === 1 ? "book" : "books"}`;
   $("#finished-this-year-list").innerHTML = books.length ? books.map((book) => {
-    const cover = coverURL(book);
+    const favorite = state.profileBooks.find((item) => normalizedBookKey(item) === normalizedBookKey(book));
+    const cover = coverURL({ ...book, coverUrl: book.coverUrl || favorite?.coverUrl || "", isbn: book.isbn || favorite?.isbn || "" });
     const coverContent = cover ? `<img src="${escapeHTML(cover)}" alt="Cover of ${escapeHTML(book.title)}" loading="lazy" />` : `<span>${escapeHTML(book.title)}</span>`;
     return `<article class="finished-book-card"><div class="finished-book-cover">${coverContent}</div><div class="finished-book-copy"><strong>${escapeHTML(book.title)}</strong><span>${escapeHTML(book.author || "Author not listed")}</span><small>Finished ${escapeHTML(book.dateRead)}</small></div></article>`;
   }).join("") : `<p class="finished-books-empty">Books with a finish date in ${year} will appear here.</p>`;
