@@ -151,9 +151,10 @@ function goodreadsTargetAttributes(book) { return `data-goodreads-target ${goodr
 async function hydrateGoodreadsTarget(target) {
   if (target.dataset.goodreadsTried) return;
   target.dataset.goodreadsTried = "true";
-  const imageUrl = await findGoodreadsCover({ title: target.dataset.goodreadsTitle, author: target.dataset.goodreadsAuthor, isbn: target.dataset.goodreadsIsbn });
-  if (!imageUrl || !target.isConnected || !target.hasAttribute("data-goodreads-target")) return;
-  const image = document.createElement("img"); image.src = imageUrl; image.alt = `Cover of ${target.dataset.goodreadsTitle}`; image.loading = "lazy";
+  const book = { title: target.dataset.goodreadsTitle, author: target.dataset.goodreadsAuthor, isbn: target.dataset.goodreadsIsbn };
+  const imageUrl = await findGoodreadsCover(book);
+  if (!imageUrl || !target.isConnected || !target.hasAttribute("data-goodreads-target") || book.title !== target.dataset.goodreadsTitle || book.author !== target.dataset.goodreadsAuthor || book.isbn !== target.dataset.goodreadsIsbn) return;
+  const image = document.createElement("img"); image.src = imageUrl; image.alt = `Cover of ${book.title}`; image.loading = "lazy";
   if (target.classList.contains("shelf-book")) { image.className = "shelf-cover-image"; target.insertBefore(image, target.querySelector(".shelf-hover-title")); }
   else { image.className = "goodreads-fallback-image"; target.replaceChildren(image); }
 }
