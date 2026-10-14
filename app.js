@@ -16,7 +16,7 @@ state.book = { ...starter.book, ...(state.book || {}) };
 state.books = Array.isArray(state.books) ? state.books : [];
 state.highlights = Array.isArray(state.highlights) ? state.highlights : [];
 state.club = { ...starter.club, ...(state.club || {}) };
-state.club.members = Array.isArray(state.club.members) ? state.club.members : starter.club.members;
+state.club.members = Array.isArray(state.club.members) ? state.club.members.map((member) => String(typeof member === "string" ? member : member?.name || member?.displayName || "").trim()).filter(Boolean) : starter.club.members;
 state.profile = { ...starter.profile, ...(state.profile || {}) };
 state.profile.yearlyGoal = Math.min(366, Math.max(1, Number.parseInt(state.profile.yearlyGoal, 10) || starter.profile.yearlyGoal));
 if (state.profile.avatar === "ghost-reading.svg") state.profile.avatar = "ghost-reading.png";
@@ -289,6 +289,7 @@ function setPage(page) {
   document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === page));
   document.querySelectorAll("[data-page]").forEach((section) => { section.hidden = section.dataset.page !== page; });
   $(".breadcrumb b").textContent = ({ club: "BOOK CLUB", profile: "PROFILE", discover: "DISCOVER" })[page];
+  if (page === "club") renderClub();
   if (page === "profile") renderProfile();
   if (page === "discover") renderFriends();
 }
@@ -434,6 +435,7 @@ async function runBookSearch(input, target, { rating = true, description = true,
 }
 
 function render() {
+  renderClub();
   applyShelfStyle();
   renderShelf();
   const readCount = state.chapters.filter((chapter) => chapter.read).length;
@@ -455,7 +457,6 @@ function render() {
   $("#note-count").textContent = notesCount;
   $("#notes-pill").textContent = `${notesCount} ${notesCount === 1 ? "note" : "notes"}`;
 
-  renderClub();
   renderProfile();
 
   $("#chapter-list").innerHTML = state.chapters.map((chapter) => {
