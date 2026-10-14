@@ -144,8 +144,8 @@ function goodreadsCoverAttributes(book) {
 function coverMarkup(book, cover, alt, className = "", loading = "lazy") {
   if (!cover) return "";
   const openLibrary = /^https:\/\/covers\.openlibrary\.org\//i.test(cover);
-  const classes = [className, openLibrary ? "openlibrary-cover-image" : ""].filter(Boolean).join(" ");
-  return `<img${classes ? ` class="${classes}"` : ""} src="${escapeHTML(cover)}" alt="${escapeHTML(alt)}" loading="${loading}"${openLibrary ? ` ${goodreadsCoverAttributes(book)}` : ""} />`;
+  const classes = ["book-cover-image", className, openLibrary ? "openlibrary-cover-image" : ""].filter(Boolean).join(" ");
+  return `<img class="${classes}" data-book-cover-art data-cover-title="${escapeHTML(book.title || "")}" src="${escapeHTML(cover)}" alt="${escapeHTML(alt)}" loading="${loading}"${openLibrary ? ` ${goodreadsCoverAttributes(book)}` : ""} />`;
 }
 function goodreadsTargetAttributes(book) { return `data-goodreads-target ${goodreadsCoverAttributes(book)}`; }
 async function hydrateGoodreadsTarget(target) {
@@ -154,9 +154,9 @@ async function hydrateGoodreadsTarget(target) {
   const book = { title: target.dataset.goodreadsTitle, author: target.dataset.goodreadsAuthor, isbn: target.dataset.goodreadsIsbn };
   const imageUrl = await findGoodreadsCover(book);
   if (!imageUrl || !target.isConnected || !target.hasAttribute("data-goodreads-target") || book.title !== target.dataset.goodreadsTitle || book.author !== target.dataset.goodreadsAuthor || book.isbn !== target.dataset.goodreadsIsbn) return;
-  const image = document.createElement("img"); image.src = imageUrl; image.alt = `Cover of ${book.title}`; image.loading = "lazy";
+  const image = document.createElement("img"); image.src = imageUrl; image.alt = `Cover of ${book.title}`; image.loading = "lazy"; image.dataset.bookCoverArt = ""; image.dataset.coverTitle = book.title;
   if (target.classList.contains("shelf-book")) { image.className = "shelf-cover-image"; target.insertBefore(image, target.querySelector(".shelf-hover-title")); }
-  else { image.className = "goodreads-fallback-image"; target.replaceChildren(image); }
+  else { image.className = "goodreads-fallback-image book-cover-image"; target.replaceChildren(image); }
 }
 const goodreadsCoverObserver = "IntersectionObserver" in window ? new IntersectionObserver((entries) => entries.filter((entry) => entry.isIntersecting).forEach((entry) => { goodreadsCoverObserver.unobserve(entry.target); hydrateGoodreadsTarget(entry.target); }), { rootMargin: "120px" }) : null;
 function hydrateGoodreadsCoverTargets(root = document) {
@@ -176,13 +176,23 @@ function renderBookDetailCover(book, cover, alt = `Cover of ${book.title}`) {
   delete container.dataset.goodreadsTried;
   hydrateGoodreadsCoverTargets(container);
 }
+document.addEventListener("load", (event) => {
+  const image = event.target;
+  if (image instanceof HTMLImageElement && image.classList.contains("shelf-cover-image")) image.classList.add("cover-loaded");
+}, true);
 document.addEventListener("error", async (event) => {
   const image = event.target;
-  if (!(image instanceof HTMLImageElement) || !image.classList.contains("openlibrary-cover-image")) return;
-  image.classList.remove("openlibrary-cover-image");
-  const imageUrl = await findGoodreadsCover({ title: image.dataset.goodreadsTitle, author: image.dataset.goodreadsAuthor, isbn: image.dataset.goodreadsIsbn });
-  if (imageUrl && image.isConnected) image.src = imageUrl;
-  else image.remove();
+  if (!(image instanceof HTMLImageElement) || (!image.hasAttribute("data-book-cover-art") && !image.classList.contains("shelf-cover-image"))) return;
+  if (image.classList.contains("openlibrary-cover-image")) {
+    image.classList.remove("openlibrary-cover-image");
+    const imageUrl = await findGoodreadsCover({ title: image.dataset.goodreadsTitle, author: image.dataset.goodreadsAuthor, isbn: image.dataset.goodreadsIsbn });
+    if (imageUrl && image.isConnected) { image.src = imageUrl; return; }
+  }
+  if (image.closest(".shelf-book")) { image.remove(); return; }
+  const title = image.dataset.coverTitle || image.alt.replace(/^Cover of /, "");
+  const fallback = document.createElement("span"); fallback.textContent = title;
+  if (image.closest(".profile-book-cover")) fallback.className = "profile-cover-fallback";
+  image.replaceWith(fallback);
 }, true);
 function shareBookArtwork(book, changes) {
   const key = normalizedBookKey(book);
@@ -247,6 +257,7 @@ function renderShelf() {
   track.style.animation = "none";
   void track.offsetWidth;
   track.style.animation = "shelf-loop var(--shelf-duration) linear infinite";
+  track.querySelectorAll(".shelf-cover-image").forEach((image) => { if (image.complete && image.naturalWidth > 0) image.classList.add("cover-loaded"); });
   hydrateGoodreadsCoverTargets(track);
 }
 async function enrichShelfPageCounts() {
