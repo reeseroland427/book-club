@@ -286,7 +286,12 @@ function applyShelfStyle() {
 function setPage(page) {
   activePage = page;
   document.body.dataset.activePage = page;
-  document.querySelectorAll("[data-tab]").forEach((button) => button.classList.toggle("active", button.dataset.tab === page));
+  document.querySelectorAll("[data-tab]").forEach((button) => {
+    const selected = button.dataset.tab === page;
+    button.classList.toggle("active", selected);
+    if (selected) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
   document.querySelectorAll("[data-page]").forEach((section) => { section.hidden = section.dataset.page !== page; });
   $(".breadcrumb b").textContent = ({ club: "BOOK CLUB", profile: "PROFILE", discover: "DISCOVER" })[page];
   if (page === "club") renderClub();
@@ -294,6 +299,26 @@ function setPage(page) {
   if (page === "discover") renderFriends();
 }
 document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setPage(button.dataset.tab)));
+
+const pageOrder = ["club", "profile", "discover"];
+let tabSwipeStart = null;
+const swipeIgnoredTargets = "button, a, input, textarea, select, [contenteditable='true'], dialog, .bookshelf-window, .bookshelf-actions, .book-search-results";
+$(".main-content").addEventListener("touchstart", (event) => {
+  if (event.touches.length !== 1 || event.target.closest(swipeIgnoredTargets)) { tabSwipeStart = null; return; }
+  const touch = event.touches[0];
+  tabSwipeStart = { x: touch.clientX, y: touch.clientY };
+}, { passive: true });
+$(".main-content").addEventListener("touchend", (event) => {
+  if (!tabSwipeStart || event.changedTouches.length !== 1) return;
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - tabSwipeStart.x;
+  const deltaY = touch.clientY - tabSwipeStart.y;
+  tabSwipeStart = null;
+  if (Math.abs(deltaX) < 64 || Math.abs(deltaX) < Math.abs(deltaY) * 1.3) return;
+  const index = pageOrder.indexOf(activePage);
+  const nextIndex = deltaX < 0 ? Math.min(index + 1, pageOrder.length - 1) : Math.max(index - 1, 0);
+  if (nextIndex !== index) setPage(pageOrder[nextIndex]);
+}, { passive: true });
 
 function renderClub() {
   $("#club-name-display").textContent = state.club.name;
@@ -479,7 +504,6 @@ function render() {
 function openBookDialog() {
   const form = $("#book-form"); form.elements.title.value = state.book.title; form.elements.author.value = state.book.author; form.elements.isbn.value = state.book.isbn || ""; form.elements.description.value = state.book.description; form.elements.chapters.value = state.chapters.length; $("#book-dialog").showModal();
 }
-$("#edit-book-open").addEventListener("click", openBookDialog);
 $("#edit-book-inline").addEventListener("click", openBookDialog);
 $("#book-form").addEventListener("submit", (event) => {
   event.preventDefault(); const form = event.currentTarget; const count = Number(form.elements.chapters.value);

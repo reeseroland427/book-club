@@ -189,6 +189,18 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .shelf-book{overflow:visible}
 .shelf-book:hover,.shelf-book:focus-visible{z-index:5}
 .shelf-hover-title{position:absolute;z-index:4;top:5px;left:50%;max-width:min(220px,70vw);width:max-content;padding:5px 8px;border:1px solid #a16b6d;border-radius:5px;background:#493330;color:#fff2ec;font:600 10px/1.25 var(--sans);text-align:center;white-space:normal;box-shadow:0 3px 10px #160c0c88;opacity:0;visibility:hidden;transform:translateX(-50%);transition:opacity .12s,visibility .12s;pointer-events:none}
+
+/* Top level navigation, shared by desktop and touch layouts. */
+.sidebar{display:none!important}
+.main-content{width:100%;max-width:1600px;margin:0 auto;padding-left:clamp(18px,6.2vw,96px);padding-right:clamp(18px,6.2vw,96px);touch-action:pan-y;overscroll-behavior-x:contain}
+.bookshelf-dock{left:0}
+.shelf-book{border-radius:4px 4px 0 0}
+.page-tabs{display:flex;gap:6px;padding:9px 0 0;border-bottom:1px solid #63494a}
+.page-tabs button{flex:1;min-height:42px;border:0;border-bottom:2px solid transparent;border-radius:7px 7px 0 0;background:transparent;color:#d0c0b7;font:600 12px var(--sans);cursor:pointer;transition:background .16s,color .16s,border-color .16s}
+.page-tabs button:hover{background:#493330;color:#f5e7df}
+.page-tabs button.active{background:#634446;color:#fff1e9;border-color:#d1a08f}
+.page-tabs button:focus-visible{outline:2px solid #d1a08f;outline-offset:2px}
+@media(max-width:560px){.main-content{padding-left:18px;padding-right:18px}.page-tabs{gap:3px;margin:0 -3px}.page-tabs button{min-height:44px;font-size:11px}}
 .shelf-cover-image{opacity:0;transition:opacity .18s ease}
 .shelf-cover-image.cover-loaded{opacity:1}
 .shelf-book:hover .shelf-hover-title,.shelf-book:focus-visible .shelf-hover-title{opacity:1;visibility:visible}

@@ -10,33 +10,16 @@
     <meta name="description" content="A quiet reading room for your book club." />
     <title>The Reading Room — Book Club</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="stylesheet" href="styles.css?v=fraunces-manrope-shelf-20261013-1" />
+    <link rel="stylesheet" href="styles.css?v=top-tabs-swipe-20261014-1" />
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Main navigation">
-        <a class="brand" href="#top" aria-label="The Reading Room home">
-          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M5 7.5c4.5-1.3 8-.5 11 2.1v17c-3-2.6-6.5-3.4-11-2.1v-17Zm22 0c-4.5-1.3-8-.5-11 2.1v17c3-2.6 6.5-3.4 11-2.1v-17Z"/><path d="M16 9.6v17"/></svg></span>
-          <span><strong>The Reading Room</strong><small>YOUR LITTLE BOOK CLUB</small></span>
-        </a>
-        <div class="nav-label">YOUR READING ROOM</div>
-        <nav class="nav-links" aria-label="Pages">
-          <button class="nav-link active" type="button" data-tab="club"><span class="nav-icon">▤</span> Book club</button>
-          <button class="nav-link" type="button" data-tab="profile"><span class="nav-icon">☻</span> Profile</button>
-          <button class="nav-link" type="button" data-tab="discover"><span class="nav-icon">⌕</span> Discover</button>
-        </nav>
-        <div class="sidebar-bottom">
-          <div class="club-note"><span class="tiny-star">✳</span><p>Good books are even better when they’re shared.</p><span>— the reading room</span></div>
-          <button class="edit-book-link" id="edit-book-open"><span>✎</span> Edit book details</button>
-        </div>
-      </aside>
-
       <main id="top" class="main-content">
         <header class="topbar">
           <div class="breadcrumb">THE READING ROOM <span>/</span> <b>NOW READING</b></div>
           <div class="reader-badge"><span class="online-dot"></span><span>OUR READING NOOK</span><span class="reader-avatars" aria-label="Two club members"><i>R</i><i>M</i></span></div>
         </header>
-        <div class="mobile-tabs" aria-label="Pages"><button class="active" data-tab="club">Book club</button><button data-tab="profile">Profile</button><button data-tab="discover">Discover</button></div>
+        <nav class="page-tabs" aria-label="Pages"><button class="active" type="button" data-tab="club" aria-current="page">Book club</button><button type="button" data-tab="profile">Profile</button><button type="button" data-tab="discover">Discover</button></nav>
 
         <section class="club-settings" data-page="club"><div class="club-title-row"><div><div class="eyebrow small-eyebrow">YOUR BOOK CLUB</div><h2 id="club-name-display">The Reading Room</h2></div><button class="quiet-button" id="edit-club-open">✎ Edit club</button></div><div class="club-members"><span class="member-label">MEMBERS</span><div id="club-member-list"></div><button class="member-add" id="edit-club-members">＋ Edit members</button></div></section>
 
@@ -94,7 +77,7 @@
     <dialog id="profile-books-dialog" class="modal catalog-modal"><form id="profile-books-form" method="dialog"><button class="modal-close" type="button" data-close aria-label="Close">×</button><div class="eyebrow small-eyebrow">YOUR NINE FAVORITES</div><h2>Choose shelf books</h2><label>Search book catalog<input id="profile-catalog-search" type="search" placeholder="Title or author…" /></label><div id="profile-catalog-results" class="search-results book-search-results"><div class="search-prompt">Search for books or choose from your reading history below.</div></div><div class="catalog-picked-heading">YOUR READING HISTORY</div><div id="history-book-choices" class="history-choices"></div><div class="modal-actions"><button class="button-primary" type="button" data-close>Done</button></div></form></dialog>
     <dialog id="current-book-search-dialog" class="modal catalog-modal"><form method="dialog"><button class="modal-close" type="button" data-close aria-label="Close">×</button><div class="eyebrow small-eyebrow">CHOOSE YOUR NEXT READ</div><h2>Search books</h2><label>Book catalog<input id="current-book-search-input" type="search" placeholder="Title or author…" /></label><div id="current-book-search-results" class="search-results book-search-results"><div class="search-prompt">Search the book catalog to choose a group read.</div></div></form></dialog>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="app.js?v=rolling-shelf-core-layout-20261013-1"></script>
+    <script src="app.js?v=top-tabs-swipe-20261014-1"></script>
   </body>
 </html>
 
