@@ -190,4 +190,9 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .shelf-book:hover,.shelf-book:focus-visible{z-index:5}
 .shelf-hover-title{position:absolute;z-index:4;top:5px;left:50%;max-width:min(220px,70vw);width:max-content;padding:5px 8px;border:1px solid #a16b6d;border-radius:5px;background:#493330;color:#fff2ec;font:600 10px/1.25 var(--sans);text-align:center;white-space:normal;box-shadow:0 3px 10px #160c0c88;opacity:0;visibility:hidden;transform:translateX(-50%);transition:opacity .12s,visibility .12s;pointer-events:none}
 .shelf-book:hover .shelf-hover-title,.shelf-book:focus-visible .shelf-hover-title{opacity:1;visibility:visible}
+.history-search-label{display:block;margin:0 0 12px;color:#c1ada2;font-size:9px}
+.history-search-label input{display:block;width:min(100%,420px);margin-top:6px;padding:9px 11px;border:1px solid #785a55;border-radius:7px;background:#342421;color:#f4e8df;font:11px var(--sans);outline:none}
+.history-search-label input::placeholder{color:#b29e93}
+.history-search-label input:focus{border-color:#b07b76;box-shadow:0 0 0 3px #85545655}
+.goodreads-fallback-image{display:block;width:100%;height:100%;object-fit:cover}
 
