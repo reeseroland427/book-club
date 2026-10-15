@@ -8,6 +8,7 @@
   const emailLabel = document.querySelector("#sync-email-label");
   const sendButton = document.querySelector("#sync-send-link");
   const signOutButton = document.querySelector("#sync-signout");
+  const importFile = document.querySelector("#sync-import-file");
   const conflictPanel = document.querySelector("#sync-conflict");
   let supabaseClient;
   let currentUser = null;
@@ -59,6 +60,45 @@
   }
   function updateRemote(state, updatedAt = new Date().toISOString()) {
     return supabaseClient.from("reading_room_state").upsert({ user_id: currentUser.id, state, updated_at: updatedAt }, { onConflict: "user_id" }).select("updated_at").single();
+  }
+  function downloadBackup() {
+    try {
+      const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+      if (!state || typeof state !== "object") {
+        setSyncStatus("There is no saved reading room on this device to back up yet.", "error");
+        return;
+      }
+      const backup = { app: "the-reading-room", version: 1, exportedAt: new Date().toISOString(), state };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `reading-room-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setSyncStatus("Backup downloaded. Keep it somewhere you can find it on this device.", "success");
+    } catch (error) {
+      setSyncStatus(`Could not make a backup: ${error.message || "please try again"}`, "error");
+    }
+  }
+  async function restoreBackup(file) {
+    if (!file) return;
+    try {
+      const backup = JSON.parse(await file.text());
+      const restoredState = backup?.app === "the-reading-room" ? backup.state : backup;
+      if (!restoredState || typeof restoredState !== "object" || Array.isArray(restoredState)) throw new Error("That file is not a Reading Room backup.");
+      if (!window.confirm("Restore this backup on this device? It will replace the reading room currently saved here.")) return;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(restoredState));
+      localStorage.setItem(revisionKey, String(Date.now()));
+      setSyncStatus("Backup restored on this device. Reloading your reading room…", "success");
+      setTimeout(() => location.reload(), 250);
+    } catch (error) {
+      setSyncStatus(`Could not restore that backup: ${error.message || "please choose a valid JSON backup"}`, "error");
+    } finally {
+      importFile.value = "";
+    }
   }
   async function pushLocalState() {
     if (!currentUser || !ready || pullInProgress) return;
@@ -190,6 +230,9 @@
   }
 
   document.querySelector("#sync-open").addEventListener("click", openDialog);
+  document.querySelector("#sync-export").addEventListener("click", downloadBackup);
+  document.querySelector("#sync-import-open").addEventListener("click", () => importFile.click());
+  importFile.addEventListener("change", () => { void restoreBackup(importFile.files?.[0]); });
   document.querySelector("#sync-use-device").addEventListener("click", () => resolveConflict("device"));
   document.querySelector("#sync-use-cloud").addEventListener("click", () => resolveConflict("cloud"));
   form.addEventListener("submit", async (event) => {

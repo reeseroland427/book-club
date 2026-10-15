@@ -205,6 +205,9 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .sync-open:hover{background:#755052}
 .sync-dialog{max-width:480px}
 .sync-explainer{color:#cbb7aa;line-height:1.65;margin:0 0 18px}
+.sync-backup-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 6px}
+.sync-backup-actions button{font-size:12px;padding:9px 12px}
+.sync-backup-help{color:#bda99e;font-size:12px;line-height:1.5;margin:0 0 14px}
 .sync-status{background:#473031;border:1px solid rgba(209,160,143,.26);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:#e9d8cb;font-size:13px;line-height:1.5}
 .sync-status[data-tone="success"]{border-color:#668f73;color:#dce9dc}
 .sync-status[data-tone="error"]{border-color:#bd766f;color:#f2d9d4}
