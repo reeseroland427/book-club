@@ -216,7 +216,7 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:101px;height:161px;margin:0 auto 10px;aspect-ratio:5/8;border-radius:2px 4px 0 1px}
 .profile-favorites-card .profile-shelf-foot{margin:10px 0 9px;font-size:9px}
 .profile-favorites-card #choose-profile-books{padding:8px 11px;font-size:9px}
-@media(max-width:1050px){.profile-dashboard{grid-template-columns:minmax(0,1fr)}.profile-favorites-card .profile-shelf-slot{height:auto!important;aspect-ratio:5/8!important;padding:0 0 12px!important}.profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:90%;height:90%;margin:0 auto;aspect-ratio:auto}.profile-favorites-card .profile-shelf-foot{font-size:10px;margin:17px 0 12px}}
+@media(max-width:1050px){.profile-dashboard{grid-template-columns:minmax(0,1fr)}.profile-main-column{display:contents}.profile-identity-card{order:1}.profile-favorites-card{order:2}.profile-main-column>.reading-goal-card{order:3}.profile-favorites-card .profile-shelf-slot{height:auto!important;aspect-ratio:5/8!important;padding:0 0 12px!important}.profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:90%;height:90%;margin:0 auto;aspect-ratio:auto}.profile-favorites-card .profile-shelf-foot{font-size:10px;margin:17px 0 12px}}
 .shelf-cover-image{opacity:0;transition:opacity .18s ease}
 .shelf-cover-image.cover-loaded{opacity:1}
 .shelf-book:hover .shelf-hover-title,.shelf-book:focus-visible .shelf-hover-title{opacity:1;visibility:visible}
