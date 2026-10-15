@@ -212,8 +212,8 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .profile-favorites-card{padding:18px 18px 16px}
 .profile-favorites-card .profile-shelf-heading{margin:0 0 7px}
 .profile-favorites-card .profile-book-grid{max-width:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0}
-.profile-favorites-card .profile-shelf-slot{height:150px!important;aspect-ratio:auto!important;padding:0!important}
-.profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:84px;height:134px;margin:0 auto 10px;aspect-ratio:5/8;border-radius:2px 4px 0 1px}
+.profile-favorites-card .profile-shelf-slot{height:180px!important;aspect-ratio:auto!important;padding:0!important}
+.profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:101px;height:161px;margin:0 auto 10px;aspect-ratio:5/8;border-radius:2px 4px 0 1px}
 .profile-favorites-card .profile-shelf-foot{margin:10px 0 9px;font-size:9px}
 .profile-favorites-card #choose-profile-books{padding:8px 11px;font-size:9px}
 @media(max-width:1050px){.profile-dashboard{grid-template-columns:minmax(0,1fr)}.profile-favorites-card .profile-shelf-slot{height:auto!important;aspect-ratio:5/8!important;padding:0 0 12px!important}.profile-favorites-card .profile-book-cover,.profile-favorites-card .profile-book-empty{width:90%;height:90%;margin:0 auto;aspect-ratio:auto}.profile-favorites-card .profile-shelf-foot{font-size:10px;margin:17px 0 12px}}
