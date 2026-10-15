@@ -200,6 +200,20 @@ body[data-shelf-edge="scalloped"] .profile-shelf-slot::after{z-index:2}
 .page-tabs button:hover{background:#493330;color:#f5e7df}
 .page-tabs button.active{background:#634446;color:#fff1e9;border-color:#d1a08f}
 .page-tabs button:focus-visible{outline:2px solid #d1a08f;outline-offset:2px}
+.reader-badge{gap:9px}
+.sync-open{display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(209,160,143,.38);border-radius:999px;background:#51383a;color:#f6e8dd;padding:5px 10px;font:600 11px Manrope,sans-serif;cursor:pointer}
+.sync-open:hover{background:#755052}
+.sync-dialog{max-width:480px}
+.sync-explainer{color:#cbb7aa;line-height:1.65;margin:0 0 18px}
+.sync-status{background:#473031;border:1px solid rgba(209,160,143,.26);border-radius:10px;padding:12px 14px;margin-bottom:16px;color:#e9d8cb;font-size:13px;line-height:1.5}
+.sync-status[data-tone="success"]{border-color:#668f73;color:#dce9dc}
+.sync-status[data-tone="error"]{border-color:#bd766f;color:#f2d9d4}
+.sync-dialog .modal-actions{justify-content:space-between;gap:10px}
+.sync-conflict{border:1px solid rgba(209,160,143,.35);border-radius:10px;padding:13px;margin:0 0 16px;background:#3a2929}
+.sync-conflict p{margin:0 0 12px;color:#e9d8cb;line-height:1.5}
+.sync-conflict-actions{display:flex;flex-wrap:wrap;gap:8px}
+.sync-conflict-actions button{font-size:12px;padding:9px 12px}
+@media(max-width:560px){.reader-badge>span:nth-child(2){display:none}.sync-open span{display:none}.sync-open{padding:6px 8px}}
 @media(max-width:560px){.main-content{padding-left:18px;padding-right:18px}.page-tabs{gap:3px;margin:0 -3px}.page-tabs button{min-height:44px;font-size:11px}}
 
 /* Keep the profile and goal together, with a compact favorites shelf beside them on wide screens. */
