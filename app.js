@@ -51,7 +51,7 @@ let pendingAddBookPageCount = 0;
 const $ = (selector) => document.querySelector(selector);
 const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); window.BookClubSync?.queueSave(state); }
 function showToast(message) { const el = $("#toast"); el.textContent = message; el.classList.add("show"); clearTimeout(toastTimeout); toastTimeout = setTimeout(() => el.classList.remove("show"), 2200); }
 function chapterNumber(id) { return state.chapters.findIndex((chapter) => chapter.id === id); }
 function isUnlocked(id) { const index = chapterNumber(id); return index >= 0 && state.chapters.slice(0, index + 1).every((chapter) => chapter.read); }
@@ -1121,6 +1121,7 @@ $("#discover-book-results").addEventListener("click", (event) => {
 document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 render();
 setPage("club");
+window.BookClubSync?.boot(state);
 enrichShelfPageCounts();
 if (recoveredBookCount) { save(); showToast(`${recoveredBookCount} saved books restored`); }
 const shelfWindow = $("#bookshelf-window");
