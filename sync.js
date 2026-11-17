@@ -11,6 +11,7 @@
   const importFile = document.querySelector("#sync-import-file");
   const conflictPanel = document.querySelector("#sync-conflict");
   let supabaseClient;
+  let bootPromise = null;
   let currentUser = null;
   let ready = false;
   let pendingConflict = null;
@@ -216,37 +217,46 @@
     if (window.supabase?.createClient) return Promise.resolve(window.supabase);
     return new Promise((resolve, reject) => {
       const script = document.createElement("script");
+      const timeout = setTimeout(() => reject(new Error("Timed out loading the Supabase library.")), 12000);
       script.src = "https://unpkg.com/@supabase/supabase-js@2";
       script.async = true;
       script.onload = () => {
+        clearTimeout(timeout);
         if (window.supabase?.createClient) resolve(window.supabase);
         else reject(new Error("The Supabase library did not initialize."));
       };
-      script.onerror = () => reject(new Error("Could not load the Supabase library."));
+      script.onerror = () => {
+        clearTimeout(timeout);
+        reject(new Error("Could not load the Supabase library."));
+      };
       document.head.append(script);
     });
   }
-  async function boot() {
-    if (supabaseClient) return;
-    sendButton.disabled = true;
-    setSyncStatus("Preparing secure sign-in…", "");
-    try {
-      const sdk = await loadSupabaseLibrary();
-      supabaseClient = sdk.createClient(PROJECT_URL, PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-      sendButton.disabled = false;
-      supabaseClient.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_OUT") { currentUser = null; ready = false; clearInterval(pullTimer); setSyncStatus("Signed out. This device still keeps its local copy.", ""); }
-        else if (session) setTimeout(() => { void reconcile(session); }, 0);
-      });
-      void supabaseClient.auth.getSession().then(({ data, error }) => {
-        if (error) throw error;
-        if (data.session) return reconcile(data.session);
-        setSyncStatus("Not connected yet", "");
-      }).catch((error) => setSyncStatus(`Could not check sign-in: ${error.message || "try reloading"}`, "error"));
-    } catch {
+  function boot() {
+    if (bootPromise) return bootPromise;
+    bootPromise = (async () => {
       sendButton.disabled = true;
-      setSyncStatus("Secure sign-in could not load. Check your connection, then reload this page.", "error");
-    }
+      setSyncStatus("Preparing secure sign-in…", "");
+      try {
+        const sdk = await loadSupabaseLibrary();
+        supabaseClient = sdk.createClient(PROJECT_URL, PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+        if (!supabaseClient?.auth) throw new Error("The Supabase client did not initialize.");
+        sendButton.disabled = false;
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+          if (event === "SIGNED_OUT") { currentUser = null; ready = false; clearInterval(pullTimer); setSyncStatus("Signed out. This device still keeps its local copy.", ""); }
+          else if (session) setTimeout(() => { void reconcile(session); }, 0);
+        });
+        void supabaseClient.auth.getSession().then(({ data, error }) => {
+          if (error) throw error;
+          if (data.session) return reconcile(data.session);
+          setSyncStatus("Not connected yet", "");
+        }).catch((error) => setSyncStatus(`Could not check sign-in: ${error.message || "try reloading"}`, "error"));
+      } catch {
+        sendButton.disabled = true;
+        setSyncStatus("Secure sign-in could not load. Check your connection, then reload this page.", "error");
+      }
+    })();
+    return bootPromise;
   }
 
   document.querySelector("#sync-open").addEventListener("click", openDialog);
@@ -283,5 +293,6 @@
   window.addEventListener("focus", () => { void pullLatest(); });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) void pullLatest(); });
   window.BookClubSync = { boot, queueSave };
+  void boot();
 })();
 
