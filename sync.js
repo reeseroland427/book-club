@@ -212,21 +212,41 @@
       setSyncStatus(`Sync check failed: ${error.message || "please try again"}`, "error");
     }
   }
-  function boot() {
-    if (!window.supabase?.createClient) {
-      setSyncStatus("Sync library did not load. Check your connection and reload.", "error");
-      return;
-    }
-    supabaseClient = window.supabase.createClient(PROJECT_URL, PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
-    supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") { currentUser = null; ready = false; clearInterval(pullTimer); setSyncStatus("Signed out. This device still keeps its local copy.", ""); }
-      else if (session) setTimeout(() => { void reconcile(session); }, 0);
+  function loadSupabaseLibrary() {
+    if (window.supabase?.createClient) return Promise.resolve(window.supabase);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/@supabase/supabase-js@2";
+      script.async = true;
+      script.onload = () => {
+        if (window.supabase?.createClient) resolve(window.supabase);
+        else reject(new Error("The Supabase library did not initialize."));
+      };
+      script.onerror = () => reject(new Error("Could not load the Supabase library."));
+      document.head.append(script);
     });
-    void supabaseClient.auth.getSession().then(({ data, error }) => {
-      if (error) throw error;
-      if (data.session) return reconcile(data.session);
-      setSyncStatus("Not connected yet", "");
-    }).catch((error) => setSyncStatus(`Could not check sign-in: ${error.message || "try reloading"}`, "error"));
+  }
+  async function boot() {
+    if (supabaseClient) return;
+    sendButton.disabled = true;
+    setSyncStatus("Preparing secure sign-in…", "");
+    try {
+      const sdk = await loadSupabaseLibrary();
+      supabaseClient = sdk.createClient(PROJECT_URL, PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
+      sendButton.disabled = false;
+      supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT") { currentUser = null; ready = false; clearInterval(pullTimer); setSyncStatus("Signed out. This device still keeps its local copy.", ""); }
+        else if (session) setTimeout(() => { void reconcile(session); }, 0);
+      });
+      void supabaseClient.auth.getSession().then(({ data, error }) => {
+        if (error) throw error;
+        if (data.session) return reconcile(data.session);
+        setSyncStatus("Not connected yet", "");
+      }).catch((error) => setSyncStatus(`Could not check sign-in: ${error.message || "try reloading"}`, "error"));
+    } catch {
+      sendButton.disabled = true;
+      setSyncStatus("Secure sign-in could not load. Check your connection, then reload this page.", "error");
+    }
   }
 
   document.querySelector("#sync-open").addEventListener("click", openDialog);
@@ -238,6 +258,10 @@
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (currentUser) return;
+    if (!supabaseClient) {
+      setSyncStatus("Secure sign-in is not ready yet. Wait a moment, or reload if this message stays.", "error");
+      return;
+    }
     const email = emailInput.value.trim();
     if (!email) return;
     sendButton.disabled = true;
